@@ -3,6 +3,8 @@ PLATFORM_CXXFLAGS=-std=c++11  -DROCKSDB_PLATFORM_POSIX -DROCKSDB_LIB_IO_POSIX  -
 PLATFORM=OS_LINUX
 PLATFORM_LDFLAGS= -lpthread -lrt -lsnappy -lgflags -lz -lbz2 -llz4 -lzstd
 
+CXXFLAGS = -Wall -Wno-reorder -I/usr/local/include -O2 -std=c++11 
+
 ifneq ($(USE_RTTI), 1)
 	CXXFLAGS += -fno-rtti
 endif
@@ -11,10 +13,10 @@ LIB_SOURCES = collocatordb.cc
 LIBOBJECTS = $(LIB_SOURCES:.cc=.o)
 
 collocatordb: collocatordb.cc
-	$(CXX) $(CXXFLAGS) -L/usr/local/lib $@.cc -o$@ -lrocksdb -I/usr/local/include -O2 -std=c++11 $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
+	$(CXX) $(CXXFLAGS) -L/usr/local/lib $@.cc -o$@ -lrocksdb $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
 
 libcollocatordb.a: $(LIBOBJECTS)
 	$(AM_V_at)$(AR) $(ARFLAGS) $@ $(LIBOBJECTS)
 
 .cc.o:
-	$(CXX) $(CXXFLAGS) -c $< -o$@ -I/usr/local/include -O2 -std=c++11 $(PLATFORM_CXXFLAGS)
+	$(CXX) $(CXXFLAGS) -c $< -o$@ $(PLATFORM_CXXFLAGS)

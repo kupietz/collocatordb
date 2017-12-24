@@ -18,6 +18,9 @@
 
 #define IS_BIG_ENDIAN (*(uint16_t *)"\0\xff" < 0x100)
 #define encodeCollocation(w1, w2, dist) (((uint64_t)dist << 56) | ((uint64_t)w2 << 24) | w1)
+#define W1(key) (uint64_t)(key & 0xffffff)
+#define W2(key) (uint64_t)((key >> 24) & 0xffffff)
+#define DIST(key) (int8_t)((uint64_t)((key >> 56) & 0xff))
 using namespace rocksdb;
 
 namespace {
@@ -109,10 +112,34 @@ namespace {
 }  // namespace
 
 class CollocatorIterator : public Iterator {
+private:
+  char prefixc[sizeof(uint64_t)];
+  Iterator *base_iterator_;
+  
+
 public:
-  explicit  CollocatorIterator() {
+  explicit CollocatorIterator(Iterator* base_iterator)
+    : base_iterator_(base_iterator)
+  {}
+
+  void setPrefix(char *prefix) {
+    memcpy(prefixc, prefix, sizeof(uint64_t));
+  }
+
+  virtual void SeekToFirst() { base_iterator_->SeekToFirst(); }
+  virtual void SeekToLast() { base_iterator_->SeekToLast(); }
+  virtual void Seek(const rocksdb::Slice& s) { base_iterator_->Seek(s); }
+  virtual void Prev() { base_iterator_->Prev(); }
+  virtual void Next() { base_iterator_->Next(); }
+  virtual Slice key() const { return base_iterator_->key(); }
+  virtual Slice value() const { return base_iterator_->value(); }
+  virtual Status status() const { return base_iterator_->status(); }
+  
+  virtual bool Valid() const override {
+    return base_iterator_->Valid() && key().starts_with(std::string(prefixc,3));
   }
 };
+
 
 class Collocators {
 private:
@@ -151,7 +178,8 @@ public:
    : put_option_(),
      get_option_(),
      delete_option_(),
-     merge_option_() {
+     merge_option_()
+{
    db_ = OpenDb(db_name, false, 0);
    assert(db_);
    uint64_t one = 1;
@@ -225,7 +253,7 @@ public:
     char encoded_key[sizeof(uint64_t)];
     EncodeFixed64(encoded_key, encodeCollocation(w1,w2,dist));
     uint64_t value = default_;
-    int result = get(std::string(encoded_key, 8), &value);
+    get(std::string(encoded_key, 8), &value);
     return value;
   }
 
@@ -258,36 +286,32 @@ public:
     }
   }
 
+  virtual CollocatorIterator* SeekIterator(uint64_t w1, uint64_t w2, int8_t dist) {
+    ReadOptions options;
+    options.prefix_same_as_start = true;  
+    char prefixc[sizeof(uint64_t)];
+    EncodeFixed64(prefixc, encodeCollocation(w1, w2, dist));
+    Iterator *it = db_->NewIterator(options);
+    CollocatorIterator *cit = new CollocatorIterator(it);
+    cit->Seek(std::string(prefixc,3));// it->Valid() && it->key().starts_with(std::string(prefixc,3)); it->Next()) {
+    cit->setPrefix(prefixc);
+    return cit;
+  }
+
 };
 
 namespace {
-  void dumpDb(DB* db) {
-    char prefixc[sizeof(uint64_t)];
-    EncodeFixed64(prefixc, encodeCollocation(1000,0,0));
-    ReadOptions options;
-    options.prefix_same_as_start = true;  
-    auto it = unique_ptr<Iterator>(db->NewIterator(options));
-
-    for (it->Seek(std::string(prefixc,3)); it->Valid() && it->key().starts_with(std::string(prefixc,3)); it->Next()) {
+  void dumpDb(Collocators counters) {
+    auto it = std::unique_ptr<CollocatorIterator>(counters.SeekIterator(1000,0,0));
+    for (; it->Valid(); it->Next()) {
       uint64_t value = DecodeFixed64(it->value().data());
       uint64_t key = DecodeFixed64(it->key().data());
-      uint64_t w1 = (uint64_t)(key & 0xffffff);
-      uint64_t w2 = (uint64_t)((key >> 24) & 0xffffff);
-      int8_t dist = (uint64_t)((key >> 56) & 0xff);
-      std::cout << "w1:" << w1 << ", w2:" << w2 << ", dist:" << (int32_t) dist << " - count:" << value << std::endl;
+      std::cout << "w1:" << W1(key) << ", w2:" << W2(key) << ", dist:" << (int32_t) DIST(key) << " - count:" << value << std::endl;
     }
-
-  
     assert(it->status().ok());  // Check for any errors found during the scan
   }
 
   void testCollocators(Collocators& counters) {
-
-    FlushOptions o;
-    DB *db = counters.getDb();
-
-    o.wait = true;
-
     counters.inc(100,200,5);
     counters.inc(1000,2000,-5);
     counters.inc(1000,2000,5);
@@ -297,8 +321,8 @@ namespace {
 
     counters.inc(1001,2900,3);
 
-    for(int i=0; i<1000000; i++)
-      counters.inc(rand()%1000,rand()%1000,5);
+    for(int i=0; i<10000; i++)
+      counters.inc(rand()%1010,rand()%1010,rand()%10-5);
 
     //  dumpDb(db);
 
@@ -309,7 +333,7 @@ namespace {
 
     counters.inc(1001,2900,3);
 
-    dumpDb(db);
+    dumpDb(counters);
   }
 
   void runTest(int argc, const std::string& dbname, const bool use_ttl = false) {
