@@ -17,6 +17,9 @@ LIBOBJECTS = $(LIB_SOURCES:.cc=.o)
 testcdb: testcdb.cc collocatordb.h collocatordb.o Makefile
 	$(CXX) $(CXXFLAGS) -L. -L/usr/local/lib $@.cc -o$@ collocatordb.o -lrocksdb $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
 
+c_testcdb: c_testcdb.c collocatordb.h collocatordb.o Makefile
+	$(CC) $(CFLAGS) -L. -L/usr/local/lib $@.c -o$@ collocatordb.o -lstdc++ -lm -lrocksdb $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
+
 collocatordb: collocatordb.cc Makefile
 	$(CXX) $(CXXFLAGS) -L/usr/local/lib $@.cc -o$@ -lrocksdb $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
 

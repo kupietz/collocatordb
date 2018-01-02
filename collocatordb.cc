@@ -18,6 +18,7 @@
 #include "rocksdb/utilities/db_ttl.h"
 #include "merge_operators.h"
 
+
 #define IS_BIG_ENDIAN (*(uint16_t *)"\0\xff" < 0x100)
 #define encodeCollocation(w1, w2, dist) (((uint64_t)dist << 56) | ((uint64_t)w2 << 24) | w1)
 #define W1(key) (uint64_t)(key & 0xffffff)
@@ -180,7 +181,7 @@ namespace rocksdb {
 
   public:
     Collocators(const char *db_name);
-
+		
     ~Collocators();
 
     // public interface of Collocators.
@@ -262,6 +263,7 @@ namespace rocksdb {
     }
 
     virtual void inc(const uint32_t w1, const uint32_t w2, const uint8_t dist);
+    void dump(uint32_t w1, uint32_t w2, int8_t dist);
 
    
     // mapped to a rocksdb Merge operation
@@ -332,8 +334,34 @@ namespace rocksdb {
     return cit;
   }
 
+	void rocksdb::Collocators::dump(uint32_t w1, uint32_t w2, int8_t dist) {
+    auto it = std::unique_ptr<CollocatorIterator>(SeekIterator(w1, w2, dist));
+    for (; it->isValid(); it->Next()) {
+      uint64_t value = it->intValue();
+      uint64_t key = it->intKey();
+      std::cout << "w1:" << W1(key) << ", w2:" << W2(key) << ", dist:" << (int32_t) DIST(key) << " - count:" << value << std::endl;
+    }
+    std::cout << "ready dumping\n";
+  }
+
   rocksdb::Slice rocksdb::CollocatorIterator::key() const { return base_iterator_->key(); }
   rocksdb::Slice rocksdb::CollocatorIterator::value() const { return base_iterator_->value(); }
   rocksdb::Status rocksdb::CollocatorIterator::status() const { return base_iterator_->status(); }
 
 };
+
+typedef rocksdb::Collocators COLLOCATORS;
+
+extern "C" {
+	COLLOCATORS *open_collocators(char *dbname) {
+		return new rocksdb::Collocators(dbname);
+	}
+	
+	void inc_collocators(COLLOCATORS *db, uint32_t w1, uint32_t w2, int8_t dist) {
+		db->inc(w1, w2, dist);
+	}
+
+	void dump_collocators(COLLOCATORS *db, uint32_t w1, uint32_t w2, int8_t dist) {
+		db->dump(w1, w2, dist);
+	}
+}

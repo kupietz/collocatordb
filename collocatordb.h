@@ -1,12 +1,8 @@
+#ifdef __cplusplus
 #include <typeinfo>
-#include <stdint.h>
-#include "rocksdb/cache.h"
-#include "rocksdb/comparator.h"
 #include "rocksdb/db.h"
-#include "rocksdb/env.h"
-#include <rocksdb/merge_operator.h>
-#include "rocksdb/utilities/db_ttl.h"
-#include "merge_operators.h"
+#endif
+#include <stdint.h>
 
 #define IS_BIG_ENDIAN (*(uint16_t *)"\0\xff" < 0x100)
 #define encodeCollocation(w1, w2, dist) (((uint64_t)dist << 56) | ((uint64_t)w2 << 24) | w1)
@@ -14,6 +10,7 @@
 #define W2(key) (uint64_t)((key >> 24) & 0xffffff)
 #define DIST(key) (int8_t)((uint64_t)((key >> 56) & 0xff))
 
+#ifdef __cplusplus
 namespace rocksdb {
     class CollocatorIterator : public Iterator  {
     public:
@@ -27,12 +24,25 @@ namespace rocksdb {
         uint64_t intKey();
     };
     
-    class Collocators {
-    public:
+		extern "C" {
+			class Collocators {
+			public:
         Collocators(const char *db_name);
         ~Collocators();
         void inc(const uint32_t w1, const uint32_t w2, const uint8_t dist);
+        void dump(const uint32_t w1, const uint32_t w2, const uint8_t dist);
         CollocatorIterator* SeekIterator(uint64_t w1, uint64_t w2, int8_t dist);
-    };
-    
+			};
+			
+		}
 }
+
+typedef rocksdb::Collocators COLLOCATORS;
+
+#else
+typedef struct COLLOCATORS COLLOCATORS;
+#endif
+
+extern COLLOCATORS *open_collocators(char *s);
+extern void inc_collocators(COLLOCATORS *db, uint64_t w1, uint64_t w2, int8_t dist);
+extern void dump_collocators(COLLOCATORS *db, uint32_t w1, uint32_t w2, int8_t dist);
