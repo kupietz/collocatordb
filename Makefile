@@ -3,7 +3,9 @@ PLATFORM_CXXFLAGS=-std=c++11  -DROCKSDB_PLATFORM_POSIX -DROCKSDB_LIB_IO_POSIX  -
 PLATFORM=OS_LINUX
 PLATFORM_LDFLAGS= -lpthread -lrt -lsnappy -lgflags -lz -lbz2 -llz4 -lzstd
 
-CXXFLAGS = -Wall -Wno-reorder -I/usr/local/include -O2 -std=c++11 
+CXXFLAGS = -Wall -Wno-reorder -I/usr/local/include -g -std=c++11 
+
+ARFLAGS = ${EXTRA_ARFLAGS} rs
 
 ifneq ($(USE_RTTI), 1)
 	CXXFLAGS += -fno-rtti
@@ -12,11 +14,18 @@ LIB_SOURCES = collocatordb.cc
 
 LIBOBJECTS = $(LIB_SOURCES:.cc=.o)
 
-collocatordb: collocatordb.cc
+testcdb: testcdb.cc collocatordb.h collocatordb.o Makefile
+	$(CXX) $(CXXFLAGS) -L. -L/usr/local/lib $@.cc -o$@ collocatordb.o -lrocksdb $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
+
+collocatordb: collocatordb.cc Makefile
 	$(CXX) $(CXXFLAGS) -L/usr/local/lib $@.cc -o$@ -lrocksdb $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
 
 libcollocatordb.a: $(LIBOBJECTS)
+	$(AM_V_AR)rm -f $@
 	$(AM_V_at)$(AR) $(ARFLAGS) $@ $(LIBOBJECTS)
+
+libcollocatordb.so.1: collocatordb.cc
+	$(CXX) $(CXXFLAGS) -c collocatordb.cc -Wl,-soname=libcollocatordb.so.1 -Wl,--version-script=collocatordb.exmap -shared -fPIC -o libcollocatordb.so.1
 
 .cc.o:
 	$(CXX) $(CXXFLAGS) -c $< -o$@ $(PLATFORM_CXXFLAGS)
