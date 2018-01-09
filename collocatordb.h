@@ -10,12 +10,6 @@
 #define W2(key) (uint64_t)((key >> 24) & 0xffffff)
 #define DIST(key) (int8_t)((uint64_t)((key >> 56) & 0xff))
 
-
-typedef struct {
-  uint64_t freq;
-  char *word;
-}  vocab_entry;
-
 #ifdef __cplusplus
 namespace rocksdb {
     class CollocatorIterator : public Iterator  {
@@ -53,6 +47,6 @@ extern COLLOCATORS *open_collocators(char *s);
 extern COLLOCATORS *open_collocators_for_read(char *s);
 extern void inc_collocators(COLLOCATORS *db, uint64_t w1, uint64_t w2, int8_t dist);
 extern void dump_collocators(COLLOCATORS *db, uint32_t w1, uint32_t w2, int8_t dist);
-extern void get_collocators(COLLOCATORS *db, uint32_t w1, vocab_entry *vocab, uint64_t total);
-extern char *get_collocators_as_json(COLLOCATORS *db, uint32_t w1, vocab_entry *vocab, uint64_t total);
+extern void get_collocators(COLLOCATORS *db, uint32_t w1);
+extern char *get_collocators_as_json(COLLOCATORS *db, uint32_t w1);
 

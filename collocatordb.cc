@@ -2,6 +2,7 @@
 #define EXPORT __attribute__((visibility("visible")))
 #define IMPORT
 #include <assert.h>
+#include <inttypes.h>
 #include <memory>
 #include <iostream>
 #include <algorithm>
@@ -190,13 +191,20 @@ namespace rocksdb {
     return DecodeFixed64(base_iterator_->value().data());
   }
 
+  class VocabEntry {
+  public:
+    string word;
+    uint64_t freq;
+  };
+
   class Collocators {
   private:
     WriteOptions merge_option_; // for merge
     char _one[sizeof(uint64_t)];
     Slice _one_slice;
-    vocab_entry *_vocab = NULL;
-
+    vector<VocabEntry> _vocab;
+    uint64_t total;
+    
   protected:
     std::shared_ptr<DB> db_;
 
@@ -208,7 +216,8 @@ namespace rocksdb {
 
     std::shared_ptr<DB> OpenDb(const char *dbname);
     std::shared_ptr<DB> OpenDbForRead(const char *dbname);
-
+    void read_vocab(string fname);
+    
   public:
     Collocators(const char *db_name, bool read_only);
     ~Collocators();
@@ -293,7 +302,7 @@ namespace rocksdb {
 
     virtual void inc(const uint32_t w1, const uint32_t w2, const uint8_t dist);
     void dump(uint32_t w1, uint32_t w2, int8_t dist);
-    vector<Collocator> get_collocators(uint32_t w1, vocab_entry *vocab, uint64_t total);
+    vector<Collocator> get_collocators(uint32_t w1);
     string collocators2json(vector<Collocator> collocators);
 
     // mapped to a rocksdb Merge operation
@@ -338,16 +347,36 @@ namespace rocksdb {
     inc(encodeCollocation(w1, w2, dist));
   }
 
+  void rocksdb::Collocators::read_vocab(string fname) {
+    char strbuf[2048];
+    uint64_t freq;
+    FILE *fin = fopen(fname.c_str(), "rb");
+    if (fin == NULL) {
+      cout <<  "Vocabulary file " << fname <<" not found\n";
+      exit(1);
+    }
+    uint64_t i = 0;
+    while(!feof(fin)) {
+      fscanf(fin, "%s %" PRIu64, strbuf, &freq);
+      _vocab.push_back({strbuf, freq});
+      total += freq;
+      i++;
+    }
+    fclose(fin);
+  }
+
   std::shared_ptr<DB> rocksdb::Collocators::OpenDbForRead(const char *name) {
 		DB* db;
 		Options options;
-    ostringstream dbname;
+    ostringstream dbname, vocabname;
     dbname << name << ".rocksdb";
 		auto s = DB::OpenForReadOnly(options, dbname.str(), &db);
 		if (!s.ok()) {
 			std::cerr << s.ToString() << std::endl;
 			assert(false);
 		}
+    vocabname << name << ".vocab";
+    read_vocab(vocabname.str());
 		return std::shared_ptr<DB>(db);
   }
 
@@ -457,8 +486,7 @@ namespace rocksdb {
 	bool sortByNpmi(const Collocator &lhs, const Collocator &rhs) { return lhs.npmi > rhs.npmi; }
 	bool sortByLfmd(const Collocator &lhs, const Collocator &rhs) { return lhs.lfmd > rhs.lfmd; }
 
-	std::vector<Collocator> rocksdb::Collocators::get_collocators(uint32_t w1, vocab_entry *vocab, uint64_t total) {
-    _vocab = vocab;
+	std::vector<Collocator> rocksdb::Collocators::get_collocators(uint32_t w1) {
 		std::vector<Collocator> collocators;
     uint64_t w2, last_w2 = 0xffffffffffffffff;
     uint64_t sum = 0, total_w1 = 0;
@@ -470,12 +498,12 @@ namespace rocksdb {
       if(last_w2 == 0xffffffffffffffff) last_w2 = w2;
       if (w2 != last_w2) {
 				double pmi = log2( total * ((double) sum) /
-													 (AVG_WINDOW_SIZE * ((double)vocab[w1].freq) * ((double)vocab[last_w2].freq) ));
+													 (AVG_WINDOW_SIZE * ((double)_vocab[w1].freq) * ((double)_vocab[last_w2].freq) ));
         //  Thanopoulos, A., Fakotakis, N., Kokkinakis, G.: Comparative evaluation of collocation extraction metrics. In: International Conference on Language Resources and Evaluation (LREC-2002). (2002) 620–625
-        // double md = log2(pow((double)sum * AVG_WINDOW_SIZE / total, 2) /  (AVG_WINDOW_SIZE * ((double)vocab[w1].freq/total) * ((double)vocab[last_w2].freq/total)));
-        double md = log2((double)sum * sum /  ((double) total * AVG_WINDOW_SIZE * AVG_WINDOW_SIZE * vocab[w1].freq * vocab[last_w2].freq));
+        // double md = log2(pow((double)sum * AVG_WINDOW_SIZE / total, 2) /  (AVG_WINDOW_SIZE * ((double)_vocab[w1].freq/total) * ((double)_vocab[last_w2].freq/total)));
+        double md = log2((double)sum * sum /  ((double) total * AVG_WINDOW_SIZE * AVG_WINDOW_SIZE * _vocab[w1].freq * _vocab[last_w2].freq));
         collocators.push_back ( {last_w2, sum, pmi, pmi / (-log2(((double) sum / AVG_WINDOW_SIZE / total))), /* normalize to [-1,1] */
-							calculateLLR(vocab[w1].freq, total, sum, vocab[last_w2].freq), md, md + log2((double)sum / AVG_WINDOW_SIZE / total), pmi*sum/total/AVG_WINDOW_SIZE} );
+							calculateLLR(_vocab[w1].freq, total, sum, _vocab[last_w2].freq), md, md + log2((double)sum / AVG_WINDOW_SIZE / total), pmi*sum/total/AVG_WINDOW_SIZE} );
         last_w2 = w2;
         sum = value;
       } else {
@@ -488,9 +516,9 @@ namespace rocksdb {
     int i=0;
     for (Collocator c : collocators) {
       if(i++>10) break;
-      std::cout << "w1:" << vocab[w1].word << ", w2:" << vocab[c.w2].word
-                << "\t f(w1):" << vocab[w1].freq
-                << "\t f(w2):" << vocab[c.w2].freq
+      std::cout << "w1:" << _vocab[w1].word << ", w2:" << _vocab[c.w2].word
+                << "\t f(w1):" << _vocab[w1].freq
+                << "\t f(w2):" << _vocab[c.w2].freq
                 << "\t f(w1, x):" << total_w1
                 << "\t f(w1, w2):" << c.sum
                 << "\t pmi:" << c.pmi
@@ -552,11 +580,11 @@ extern "C" {
 		db->dump(w1, w2, dist);
 	}
 
-	void get_collocators(COLLOCATORS *db, uint32_t w1, vocab_entry *vocab, uint64_t total) {
-		db->get_collocators(w1, vocab, total);
+	void get_collocators(COLLOCATORS *db, uint32_t w1) {
+		db->get_collocators(w1);
 	}
 
-	const char *get_collocators_as_json(COLLOCATORS *db, uint32_t w1, vocab_entry *vocab, uint64_t total) {
-		return strdup(db->collocators2json(db->get_collocators(w1, vocab, total)).c_str());
+	const char *get_collocators_as_json(COLLOCATORS *db, uint32_t w1) {
+		return strdup(db->collocators2json(db->get_collocators(w1)).c_str());
 	}
 }
