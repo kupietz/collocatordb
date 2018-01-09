@@ -207,10 +207,10 @@ namespace rocksdb {
     uint64_t default_;
 
     std::shared_ptr<DB> OpenDb(const char *dbname);
+    std::shared_ptr<DB> OpenDbForRead(const char *dbname);
 
   public:
-    Collocators(const char *db_name);
-		
+    Collocators(const char *db_name, bool read_only);
     ~Collocators();
 
     // public interface of Collocators.
@@ -314,10 +314,12 @@ namespace rocksdb {
     CollocatorIterator* SeekIterator(uint64_t w1, uint64_t w2, int8_t dist);
   };
 
-  rocksdb::Collocators::Collocators(const char *db_name) {
-    std::cout << "Test merge-based counters... " << db_name << "\n";
+  rocksdb::Collocators::Collocators(const char *db_name, bool read_only = false) {
 		//		merge_option_.sync = true;
-    db_ = OpenDb(db_name);
+    if(read_only)
+      db_ = OpenDbForRead(db_name);
+    else
+      db_ = OpenDb(db_name);
     assert(db_);
     uint64_t one = 1;
     EncodeFixed64(_one, one);
@@ -336,8 +338,20 @@ namespace rocksdb {
     inc(encodeCollocation(w1, w2, dist));
   }
 
+  std::shared_ptr<DB> rocksdb::Collocators::OpenDbForRead(const char *name) {
+		DB* db;
+		Options options;
+    ostringstream dbname;
+    dbname << name << ".rocksdb";
+		auto s = DB::OpenForReadOnly(options, dbname.str(), &db);
+		if (!s.ok()) {
+			std::cerr << s.ToString() << std::endl;
+			assert(false);
+		}
+		return std::shared_ptr<DB>(db);
+  }
+
   std::shared_ptr<DB> rocksdb::Collocators::OpenDb(const char *dbname) {
-		std::cout << "Test merge-based counters... " << dbname << "\n";
 		DB* db;
 		Options options;
 
@@ -524,6 +538,10 @@ typedef rocksdb::Collocators COLLOCATORS;
 extern "C" {
 	COLLOCATORS *open_collocators(char *dbname) {
 		return new rocksdb::Collocators(dbname);
+	}
+	
+	COLLOCATORS *open_collocators_for_read(char *dbname) {
+		return new rocksdb::Collocators(dbname, true);
 	}
 	
 	void inc_collocators(COLLOCATORS *db, uint32_t w1, uint32_t w2, int8_t dist) {

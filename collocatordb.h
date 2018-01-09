@@ -50,6 +50,7 @@ typedef struct COLLOCATORS COLLOCATORS;
 #endif
 
 extern COLLOCATORS *open_collocators(char *s);
+extern COLLOCATORS *open_collocators_for_read(char *s);
 extern void inc_collocators(COLLOCATORS *db, uint64_t w1, uint64_t w2, int8_t dist);
 extern void dump_collocators(COLLOCATORS *db, uint32_t w1, uint32_t w2, int8_t dist);
 extern void get_collocators(COLLOCATORS *db, uint32_t w1, vocab_entry *vocab, uint64_t total);
