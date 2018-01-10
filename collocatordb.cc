@@ -152,8 +152,6 @@ namespace rocksdb {
       : base_iterator_(base_iterator)
     {}
 
-    ~CollocatorIterator();
-
     void setPrefix(char *prefix) {
       memcpy(prefixc, prefix, sizeof(uint64_t));
     }
@@ -220,7 +218,6 @@ namespace rocksdb {
     
   public:
     CollocatorDB(const char *db_name, bool read_only);
-    ~CollocatorDB();
 
     // public interface of CollocatorDB.
     // All four functions return false
@@ -333,14 +330,6 @@ namespace rocksdb {
     uint64_t one = 1;
     EncodeFixed64(_one, one);
     _one_slice = Slice(_one, sizeof(uint64_t));
-  }
-
-  rocksdb::CollocatorIterator::~CollocatorIterator() {
-    std::cout << "destroying itera\n";
-  }
-
-  rocksdb::CollocatorDB::~CollocatorDB() {
-    std::cout << "destroying coll\n";
   }
 
   void rocksdb::CollocatorDB::inc(const uint32_t w1, const uint32_t w2, const uint8_t dist) {
