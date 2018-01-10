@@ -5,7 +5,7 @@
 #include "collocatordb.h"
 
 int main() {
-	COLLOCATORS *cdb = open_collocators_for_read("/vol/work/kupietz/Work2/kl/trunk/Analysemethoden/wang2vec/sample");
+	COLLOCATORDB *cdb = open_collocatordb("/vol/work/kupietz/Work2/kl/trunk/Analysemethoden/wang2vec/sample");
   for(int i=100; i < 1000; i++)
     get_collocators(cdb, i);
   printf("%s\n", get_collocators_as_json(cdb, 500));

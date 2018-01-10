@@ -25,10 +25,10 @@ namespace rocksdb {
     };
     
 		extern "C" {
-			class Collocators {
+			class CollocatorDB {
 			public:
-        Collocators(const char *db_name);
-        ~Collocators();
+        CollocatorDB(const char *db_name);
+        ~CollocatorDB();
         void inc(const uint32_t w1, const uint32_t w2, const uint8_t dist);
         void dump(const uint32_t w1, const uint32_t w2, const uint8_t dist);
         CollocatorIterator* SeekIterator(uint64_t w1, uint64_t w2, int8_t dist);
@@ -37,16 +37,16 @@ namespace rocksdb {
 		}
 }
 
-typedef rocksdb::Collocators COLLOCATORS;
+typedef rocksdb::CollocatorDB COLLOCATORDB;
 
 #else
-typedef struct COLLOCATORS COLLOCATORS;
+typedef struct COLLOCATORDB COLLOCATORDB;
 #endif
 
-extern COLLOCATORS *open_collocators(char *s);
-extern COLLOCATORS *open_collocators_for_read(char *s);
-extern void inc_collocators(COLLOCATORS *db, uint64_t w1, uint64_t w2, int8_t dist);
-extern void dump_collocators(COLLOCATORS *db, uint32_t w1, uint32_t w2, int8_t dist);
-extern void get_collocators(COLLOCATORS *db, uint32_t w1);
-extern char *get_collocators_as_json(COLLOCATORS *db, uint32_t w1);
+extern COLLOCATORDB *open_collocatordb(char *s);
+extern COLLOCATORDB *open_collocatordb_for_write(char *s);
+extern void inc_collocator(COLLOCATORDB *db, uint64_t w1, uint64_t w2, int8_t dist);
+extern void dump_collocators(COLLOCATORDB *db, uint32_t w1, uint32_t w2, int8_t dist);
+extern void get_collocators(COLLOCATORDB *db, uint32_t w1);
+extern char *get_collocators_as_json(COLLOCATORDB *db, uint32_t w1);
 

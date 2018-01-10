@@ -197,7 +197,7 @@ namespace rocksdb {
     uint64_t freq;
   };
 
-  class Collocators {
+  class CollocatorDB {
   private:
     WriteOptions merge_option_; // for merge
     char _one[sizeof(uint64_t)];
@@ -219,10 +219,10 @@ namespace rocksdb {
     void read_vocab(string fname);
     
   public:
-    Collocators(const char *db_name, bool read_only);
-    ~Collocators();
+    CollocatorDB(const char *db_name, bool read_only);
+    ~CollocatorDB();
 
-    // public interface of Collocators.
+    // public interface of CollocatorDB.
     // All four functions return false
     // if the underlying level db operation failed.
 
@@ -323,7 +323,7 @@ namespace rocksdb {
     CollocatorIterator* SeekIterator(uint64_t w1, uint64_t w2, int8_t dist);
   };
 
-  rocksdb::Collocators::Collocators(const char *db_name, bool read_only = false) {
+  rocksdb::CollocatorDB::CollocatorDB(const char *db_name, bool read_only = false) {
 		//		merge_option_.sync = true;
     if(read_only)
       db_ = OpenDbForRead(db_name);
@@ -339,15 +339,15 @@ namespace rocksdb {
     std::cout << "destroying itera\n";
   }
 
-  rocksdb::Collocators::~Collocators() {
+  rocksdb::CollocatorDB::~CollocatorDB() {
     std::cout << "destroying coll\n";
   }
 
-  void rocksdb::Collocators::inc(const uint32_t w1, const uint32_t w2, const uint8_t dist) {
+  void rocksdb::CollocatorDB::inc(const uint32_t w1, const uint32_t w2, const uint8_t dist) {
     inc(encodeCollocation(w1, w2, dist));
   }
 
-  void rocksdb::Collocators::read_vocab(string fname) {
+  void rocksdb::CollocatorDB::read_vocab(string fname) {
     char strbuf[2048];
     uint64_t freq;
     FILE *fin = fopen(fname.c_str(), "rb");
@@ -365,7 +365,7 @@ namespace rocksdb {
     fclose(fin);
   }
 
-  std::shared_ptr<DB> rocksdb::Collocators::OpenDbForRead(const char *name) {
+  std::shared_ptr<DB> rocksdb::CollocatorDB::OpenDbForRead(const char *name) {
 		DB* db;
 		Options options;
     ostringstream dbname, vocabname;
@@ -380,7 +380,7 @@ namespace rocksdb {
 		return std::shared_ptr<DB>(db);
   }
 
-  std::shared_ptr<DB> rocksdb::Collocators::OpenDb(const char *dbname) {
+  std::shared_ptr<DB> rocksdb::CollocatorDB::OpenDb(const char *dbname) {
 		DB* db;
 		Options options;
 
@@ -419,7 +419,7 @@ namespace rocksdb {
 		return std::shared_ptr<DB>(db);
   }
 
-  CollocatorIterator* rocksdb::Collocators::SeekIterator(uint64_t w1, uint64_t w2, int8_t dist) {
+  CollocatorIterator* rocksdb::CollocatorDB::SeekIterator(uint64_t w1, uint64_t w2, int8_t dist) {
     ReadOptions options;
     options.prefix_same_as_start = true;
     char prefixc[sizeof(uint64_t)];
@@ -431,7 +431,7 @@ namespace rocksdb {
     return cit;
   }
 
-	void rocksdb::Collocators::dump(uint32_t w1, uint32_t w2, int8_t dist) {
+	void rocksdb::CollocatorDB::dump(uint32_t w1, uint32_t w2, int8_t dist) {
     auto it = std::unique_ptr<CollocatorIterator>(SeekIterator(w1, w2, dist));
     for (; it->isValid(); it->Next()) {
       uint64_t value = it->intValue();
@@ -486,7 +486,7 @@ namespace rocksdb {
 	bool sortByNpmi(const Collocator &lhs, const Collocator &rhs) { return lhs.npmi > rhs.npmi; }
 	bool sortByLfmd(const Collocator &lhs, const Collocator &rhs) { return lhs.lfmd > rhs.lfmd; }
 
-	std::vector<Collocator> rocksdb::Collocators::get_collocators(uint32_t w1) {
+	std::vector<Collocator> rocksdb::CollocatorDB::get_collocators(uint32_t w1) {
 		std::vector<Collocator> collocators;
     uint64_t w2, last_w2 = 0xffffffffffffffff;
     uint64_t sum = 0, total_w1 = 0;
@@ -539,7 +539,7 @@ namespace rocksdb {
 
 };
 
-string rocksdb::Collocators::collocators2json(vector<Collocator> collocators) {
+string rocksdb::CollocatorDB::collocators2json(vector<Collocator> collocators) {
   ostringstream s;
   s << "[";
   bool first = true;
@@ -561,18 +561,18 @@ string rocksdb::Collocators::collocators2json(vector<Collocator> collocators) {
   return s.str();
 }
 
-typedef rocksdb::Collocators COLLOCATORS;
+typedef rocksdb::CollocatorDB COLLOCATORS;
 
 extern "C" {
-	COLLOCATORS *open_collocators(char *dbname) {
-		return new rocksdb::Collocators(dbname);
+	COLLOCATORS *open_collocatordb_for_write(char *dbname) {
+		return new rocksdb::CollocatorDB(dbname, false);
 	}
 	
-	COLLOCATORS *open_collocators_for_read(char *dbname) {
-		return new rocksdb::Collocators(dbname, true);
+	COLLOCATORS *open_collocatordb(char *dbname) {
+		return new rocksdb::CollocatorDB(dbname, true);
 	}
 	
-	void inc_collocators(COLLOCATORS *db, uint32_t w1, uint32_t w2, int8_t dist) {
+	void inc_collocator(COLLOCATORS *db, uint32_t w1, uint32_t w2, int8_t dist) {
 		db->inc(w1, w2, dist);
 	}
 
