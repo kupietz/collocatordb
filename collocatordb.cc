@@ -357,6 +357,14 @@ namespace rocksdb {
   std::shared_ptr<DB> rocksdb::CollocatorDB::OpenDbForRead(const char *name) {
 		DB* db;
 		Options options;
+		options.env->SetBackgroundThreads(4);
+		options.create_if_missing = true;
+		options.merge_operator = std::make_shared<CountMergeOperator>();
+		options.max_successive_merges = 0;
+    //		options.prefix_extractor.reset(NewFixedPrefixTransform(8));
+		options.IncreaseParallelism();
+    options.OptimizeLevelStyleCompaction();
+    options.prefix_extractor.reset(NewFixedPrefixTransform(3));
     ostringstream dbname, vocabname;
     dbname << name << ".rocksdb";
 		auto s = DB::OpenForReadOnly(options, dbname.str(), &db);
@@ -378,12 +386,12 @@ namespace rocksdb {
 		options.create_if_missing = true;
 		options.merge_operator = std::make_shared<CountMergeOperator>();
 		options.max_successive_merges = 0;
-		//		options.prefix_extractor.reset(NewFixedPrefixTransform(8));
-		options.IncreaseParallelism(70);
-    //		options.OptimizeLevelStyleCompaction();
-    options.max_write_buffer_number = 48;
-    options.max_background_jobs = 48;
-    options.allow_concurrent_memtable_write=true;
+    //		options.prefix_extractor.reset(NewFixedPrefixTransform(8));
+		options.IncreaseParallelism();
+    options.OptimizeLevelStyleCompaction();
+    // options.max_write_buffer_number = 48;
+    // options.max_background_jobs = 48;
+    // options.allow_concurrent_memtable_write=true;
 		//		options.memtable_factory.reset(rocksdb::NewHashLinkListRepFactory(200000));
 		// options.enable_write_thread_adaptive_yield = 1;
 		// options.allow_concurrent_memtable_write = 1;
@@ -391,7 +399,7 @@ namespace rocksdb {
 		// options.write_buffer_size = 1 << 22;
 		// options.allow_mmap_reads = true;
 		// options.allow_mmap_writes = true;
-		options.max_background_compactions = 40;
+		// options.max_background_compactions = 40;
     // BlockBasedTableOptions table_options;
     // table_options.filter_policy.reset(NewBloomFilterPolicy(24, false));
 		// options.bloom_locality = 1;
@@ -530,9 +538,12 @@ namespace rocksdb {
 
 string rocksdb::CollocatorDB::collocators2json(vector<Collocator> collocators) {
   ostringstream s;
+  int i = 0;
   s << "[";
   bool first = true;
   for (Collocator c : collocators) {
+    if (i++ > 200)
+      break;
     if(!first)
       s << ",\n";
     else
@@ -543,7 +554,7 @@ string rocksdb::CollocatorDB::collocators2json(vector<Collocator> collocators) {
       "\"npmi\":" << c.npmi  << "," <<
       "\"llr\":" << c.llr   << "," <<
       "\"lfmd\":" << c.lfmd  << "," <<
-      "\"mi\":" << c.fpmi  <<
+      "\"fpmi\":" << c.fpmi  <<
       "}";
   }
   s << "]\n";
