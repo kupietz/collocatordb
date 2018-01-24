@@ -51,9 +51,12 @@ namespace rocksdb {
     double pmi;
     double npmi;
     double llr;
-    double md;
     double lfmd;
     double fpmi;
+    double left_lfmd;
+    double right_lfmd;
+    double left_npmi;
+    double right_npmi;
   };
 
   size_t num_merge_operator_calls;
@@ -103,6 +106,25 @@ namespace rocksdb {
       uint64_t hi = DecodeFixed32(ptr + 4);
       return (hi << 32) | lo;
     }
+  }
+
+  static inline double ca_pmi(uint64_t f1, uint64_t f2, uint64_t f12, uint64_t total, double window_size) {
+    return log2( total * ((double) f12) / (window_size * ((double) f1) * ((double)f2) ));
+  }
+
+  static inline double ca_npmi(uint64_t f1, uint64_t f2, uint64_t f12, uint64_t total, double window_size) {
+    return log2( total * ((double) f12) / (window_size * ((double) f1) * ((double)f2) )) * f12 / total / window_size;
+  }
+
+  // Thanopoulos, A., Fakotakis, N., Kokkinakis, G.: Comparative evaluation of collocation extraction metrics.
+  // In: International Conference on Language Resources and Evaluation (LREC-2002). (2002) 620–625
+  // double md = log2(pow((double)max * window_size / total, 2) /  (window_size * ((double)_vocab[w1].freq/total) * ((double)_vocab[last_w2].freq/total)));
+  static inline double ca_md(uint64_t f1, uint64_t f2, uint64_t f12, uint64_t total, double window_size) {
+    return log2((double)f12 * f12 /  ((double) total * window_size * window_size * f1 * f2));
+  }
+
+  static inline double ca_lfmd(uint64_t f1, uint64_t f2, uint64_t f12, uint64_t total, double window_size) {
+    return log2((double)f12 * f12 /  ((double) total * window_size * window_size * f1 * f2)) + log2((double) f12 / window_size / total);
   }
 
 
@@ -516,7 +538,7 @@ namespace rocksdb {
     int i=0;
     for (Collocator c : collocators) {
       if(i++>10) break;
-      std::cout << "w1:" << _vocab[w1].word << ", w2:" << _vocab[c.w2].word
+      std::cout << "dont call me w1:" << _vocab[w1].word << ", w2:" << _vocab[c.w2].word
                 << "\t f(w1):" << _vocab[w1].freq
                 << "\t f(w2):" << _vocab[c.w2].freq
                 << "\t f(w1, x):" << total_w1
@@ -524,7 +546,6 @@ namespace rocksdb {
                 << "\t pmi:" << c.pmi
                 << "\t npmi:" << c.npmi
                 << "\t llr:" << c.llr
-                << "\t md:" << c.md
                 << "\t lfmd:" << c.lfmd
                 << "\t fpmi:" << c.fpmi
                 << "\t total:" << total
@@ -536,9 +557,8 @@ namespace rocksdb {
 	std::vector<Collocator> rocksdb::CollocatorDB::get_collocators(uint32_t w1) {
 		std::vector<Collocator> collocators;
     uint64_t w2, last_w2 = 0xffffffffffffffff;
-    uint64_t max = 0, total_w1 = 0;
+    uint64_t maxv = 0, left = 0, right = 0, total_w1 = 0;
     const double window_size = 1;
-
     for ( auto it = std::unique_ptr<CollocatorIterator>(SeekIterator(w1, 0, 0)); it->isValid(); it->Next()) {
       uint64_t value = it->intValue(),
         key = it->intKey();
@@ -546,19 +566,29 @@ namespace rocksdb {
       total_w1 += value;
       if(last_w2 == 0xffffffffffffffff) last_w2 = w2;
       if (w2 != last_w2) {
-				double pmi = log2( total * ((double) max) /
-													 (window_size * ((double)_vocab[w1].freq) * ((double)_vocab[last_w2].freq) ));
-        //  Thanopoulos, A., Fakotakis, N., Kokkinakis, G.: Comparative evaluation of collocation extraction metrics. In: International Conference on Language Resources and Evaluation (LREC-2002). (2002) 620–625
-        // double md = log2(pow((double)max * window_size / total, 2) /  (window_size * ((double)_vocab[w1].freq/total) * ((double)_vocab[last_w2].freq/total)));
-        double md = log2((double)max * max /  ((double) total * window_size * window_size * _vocab[w1].freq * _vocab[last_w2].freq));
-        collocators.push_back ( {last_w2, max, pmi, pmi / (-log2(((double) max / window_size / total))), /* normalize to [-1,1] */
-							calculateLLR(_vocab[w1].freq, total, max, _vocab[last_w2].freq), md, md + log2((double)max / window_size / total), pmi*max/total/window_size} );
+				double pmi = ca_pmi(_vocab[w1].freq, _vocab[last_w2].freq, maxv, total, window_size);
+        double lfmd = ca_lfmd(_vocab[w1].freq, _vocab[last_w2].freq, maxv, total, window_size);
+        double left_lfmd = ca_lfmd(_vocab[w1].freq, _vocab[last_w2].freq, left, total, 1);
+        double right_lfmd = ca_lfmd(_vocab[w1].freq, _vocab[last_w2].freq, right, total, 1);
+        double left_npmi = ca_npmi(_vocab[w1].freq, _vocab[last_w2].freq, left, total, 1);
+        double right_npmi = ca_npmi(_vocab[w1].freq, _vocab[last_w2].freq, right, total, 1);
+        collocators.push_back ( {last_w2, maxv, pmi, pmi / (-log2(((double) maxv / window_size / total))), /* normalize to [-1,1] */
+							calculateLLR(_vocab[w1].freq, total, maxv, _vocab[last_w2].freq), lfmd, pmi*maxv/total/window_size,
+              left_lfmd,
+              right_lfmd,
+              left_npmi,
+              right_npmi}
+          );
         last_w2 = w2;
-        max = value;
+        maxv = value;
       } else {
-        if(value > max)
-          max = value;
+        if(value > maxv)
+          maxv = value;
       }
+      if(DIST(key) == -1)
+        left = value;
+      else if(DIST(key) == 1)
+        right = value;
     }
 
 		sort(collocators.begin(), collocators.end(), sortByLfmd);
@@ -574,7 +604,6 @@ namespace rocksdb {
                 << "\t pmi:" << c.pmi
                 << "\t npmi:" << c.npmi
                 << "\t llr:" << c.llr
-                << "\t md:" << c.md
                 << "\t lfmd:" << c.lfmd
                 << "\t fpmi:" << c.fpmi
                 << "\t total:" << total
@@ -607,10 +636,15 @@ string rocksdb::CollocatorDB::collocators2json(vector<Collocator> collocators) {
       "\"npmi\":" << c.npmi  << "," <<
       "\"llr\":" << c.llr   << "," <<
       "\"lfmd\":" << c.lfmd  << "," <<
-      "\"fpmi\":" << c.fpmi  <<
+      "\"fpmi\":" << c.fpmi  << "," <<
+      "\"llfmd\":" << c.left_lfmd  << "," <<
+      "\"rlfmd\":" << c.right_lfmd  << "," <<
+      "\"lnpmi\":" << c.left_npmi  << "," <<
+      "\"rnpmi\":" << c.right_npmi  <<
       "}";
   }
   s << "]\n";
+  //  cout << s.str();
   return s.str();
 }
 
