@@ -47,7 +47,7 @@ namespace rocksdb {
   class Collocator {
   public:
     uint64_t w2;
-    uint64_t sum;
+    uint64_t raw;
     double pmi;
     double npmi;
     double llr;
@@ -542,7 +542,7 @@ namespace rocksdb {
                 << "\t f(w1):" << _vocab[w1].freq
                 << "\t f(w2):" << _vocab[c.w2].freq
                 << "\t f(w1, x):" << total_w1
-                << "\t f(w1, w2):" << c.sum
+                << "\t f(w1, w2):" << c.raw
                 << "\t pmi:" << c.pmi
                 << "\t npmi:" << c.npmi
                 << "\t llr:" << c.llr
@@ -600,7 +600,7 @@ namespace rocksdb {
                 << "\t f(w1):" << _vocab[w1].freq
                 << "\t f(w2):" << _vocab[c.w2].freq
                 << "\t f(w1, x):" << total_w1
-                << "\t f(w1, w2):" << c.sum
+                << "\t f(w1, w2):" << c.raw
                 << "\t pmi:" << c.pmi
                 << "\t npmi:" << c.npmi
                 << "\t llr:" << c.llr
@@ -633,6 +633,7 @@ string rocksdb::CollocatorDB::collocators2json(vector<Collocator> collocators) {
     s << "{"
       "\"word\":\"" << string(_vocab[c.w2].word) << "\"," <<
       "\"rank\":" << c.w2    << "," <<
+      "\"f\":" << c.raw    << "," <<
       "\"npmi\":" << c.npmi  << "," <<
       "\"llr\":" << c.llr   << "," <<
       "\"lfmd\":" << c.lfmd  << "," <<
