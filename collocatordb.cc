@@ -603,6 +603,7 @@ namespace rocksdb {
 
 		sort(collocators.begin(), collocators.end(), sortByLfmd);
 		
+    /*
     int i=0;
     for (Collocator c : collocators) {
       if(i++>10) break;
@@ -619,6 +620,7 @@ namespace rocksdb {
                 << "\t total:" << total
                 << std::endl;
     }
+    */
 		return collocators;
   }
 
