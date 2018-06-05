@@ -1,7 +1,7 @@
 PLATFORM_CCFLAGS= -DROCKSDB_PLATFORM_POSIX -DROCKSDB_LIB_IO_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_FALLOCATE_PRESENT -DSNAPPY -DGFLAGS=1 -DZLIB -DBZIP2 -DLZ4 -DZSTD -DROCKSDB_MALLOC_USABLE_SIZE -DROCKSDB_PTHREAD_ADAPTIVE_MUTEX -DROCKSDB_BACKTRACE -DROCKSDB_RANGESYNC_PRESENT -DROCKSDB_SCHED_GETCPU_PRESENT -march=native  -DROCKSDB_SUPPORT_THREAD_LOCAL
 PLATFORM_CXXFLAGS=-std=c++11  -DROCKSDB_PLATFORM_POSIX -DROCKSDB_LIB_IO_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_FALLOCATE_PRESENT -DSNAPPY -DGFLAGS=1 -DZLIB -DBZIP2 -DLZ4 -DZSTD -DROCKSDB_MALLOC_USABLE_SIZE -DROCKSDB_PTHREAD_ADAPTIVE_MUTEX -DROCKSDB_BACKTRACE -DROCKSDB_RANGESYNC_PRESENT -DROCKSDB_SCHED_GETCPU_PRESENT -march=native  -DROCKSDB_SUPPORT_THREAD_LOCAL
 PLATFORM=OS_LINUX
-PLATFORM_LDFLAGS= -lpthread -lrt -lsnappy -lz -lbz2 -llz4 -lzstd
+PLATFORM_LDFLAGS= -L/usr/local/lib -lpthread -lrt -lsnappy -lz -lbz2 -llz4 -lzstd
 
 CXXFLAGS = -Wall -Wno-reorder -I/usr/local/include -g -std=c++11  -Ofast -march=k8
 CFLAGS = -Wall -I/usr/local/include -g -std=gnu99  -O2 -march=k8
@@ -14,6 +14,7 @@ endif
 LIB_SOURCES = collocatordb.cc
 
 LIBOBJECTS = $(LIB_SOURCES:.cc=.o)
+INSTALL_PATH = /usr/local
 
 testcdb: testcdb.cc collocatordb.h collocatordb.o Makefile
 	$(CXX) $(CXXFLAGS) -L. -L/usr/local/lib $@.cc -o$@ collocatordb.o -lrocksdb $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
@@ -39,3 +40,10 @@ libcollocatordb.so.1: collocatordb.cc
 
 .cc.o:
 	$(CXX) $(CXXFLAGS) -c $< -o$@ $(PLATFORM_CXXFLAGS)
+
+install-static: libcollocatordb.a
+	install -C -m 755 libcollocatordb.a $(INSTALL_PATH)/lib
+
+install-shared: libcollocatordb.so.1
+	install -C -m 755 libcollocatordb.so.1 $(INSTALL_PATH)/lib && \
+		ln -fs $(INSTALL_PATH)/lib/libcollocatordb.so.1 $(INSTALL_PATH)/lib/libcollocatordb.so
