@@ -16,6 +16,9 @@ LIB_SOURCES = collocatordb.cc
 LIBOBJECTS = $(LIB_SOURCES:.cc=.o)
 INSTALL_PATH = /usr/local
 
+hello_world: hello_world.c collocatordb.h collocatordb.o Makefile
+	$(CC) $(CFLAGS) -L. -L/usr/local/lib $@.c -o$@ collocatordb.o /vol/work/kupietz/rocksdb/librocksdb.a -std=gnu99 -lstdc++ -lm $(PLATFORM_LDFLAGS) $(PLATFORM_CCFLAGS) $(EXEC_LDFLAGS) 
+
 testcdb: testcdb.cc collocatordb.h collocatordb.o Makefile
 	$(CXX) $(CXXFLAGS) -L. -L/usr/local/lib $@.cc -o$@ collocatordb.o -lrocksdb $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
 
@@ -23,9 +26,6 @@ dumpllr: dumpllr.cc collocatordb.h collocatordb.o Makefile
 	$(CXX) $(CXXFLAGS) -L. -L/usr/local/lib $@.cc -fopenmp -o$@ collocatordb.o /vol/work/kupietz/rocksdb/librocksdb.a $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
 
 c_testcdb: c_testcdb.c collocatordb.h collocatordb.o Makefile
-	$(CC) $(CFLAGS) -L. -L/usr/local/lib $@.c -o$@ collocatordb.o -std=gnu99 -lstdc++ -lm -lrocksdb $(PLATFORM_LDFLAGS) $(PLATFORM_CCFLAGS) $(EXEC_LDFLAGS)
-
-c_testanalysis: c_testanalysis.c collocatordb.h collocatordb.o Makefile
 	$(CC) $(CFLAGS) -L. -L/usr/local/lib $@.c -o$@ collocatordb.o -std=gnu99 -lstdc++ -lm -lrocksdb $(PLATFORM_LDFLAGS) $(PLATFORM_CCFLAGS) $(EXEC_LDFLAGS)
 
 collocatordb: collocatordb.cc Makefile
