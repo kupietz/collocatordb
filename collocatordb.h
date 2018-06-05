@@ -66,4 +66,4 @@ extern void inc_collocator(COLLOCATORDB *db, uint64_t w1, uint64_t w2, int8_t di
 extern void dump_collocators(COLLOCATORDB *db, uint32_t w1, uint32_t w2, int8_t dist);
 extern void get_collocators(COLLOCATORDB *db, uint32_t w1);
 extern char *get_collocators_as_json(COLLOCATORDB *db, uint32_t w1);
-
+extern char *get_word(COLLOCATORDB *db, uint32_t w1);

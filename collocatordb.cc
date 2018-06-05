@@ -723,6 +723,10 @@ extern "C" {
 		db->get_collocators(w1);
 	}
 
+	const char *get_word(COLLOCATORS *db, uint32_t w) {
+		return db->getWord(w).c_str();
+	}
+
 	const char *get_collocators_as_json(COLLOCATORS *db, uint32_t w1) {
 		return strdup(db->collocators2json(db->get_collocators(w1)).c_str());
 	}
