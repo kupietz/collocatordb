@@ -543,7 +543,7 @@ namespace rocksdb {
       }
     }
 
-		sort(collocators.begin(), collocators.end(), sortByLfmd);
+		sort(collocators.begin(), collocators.end(), sortByNpmi);
 		
     int i=0;
     for (Collocator c : collocators) {
