@@ -323,6 +323,7 @@ namespace rocksdb {
     virtual void inc(const uint32_t w1, const uint32_t w2, const uint8_t dist);
     void dump(uint32_t w1, uint32_t w2, int8_t dist);
     vector<Collocator> get_collocators(uint32_t w1);
+    void dumpSparseLlr(uint32_t w1, uint32_t min_cooccur);
     vector<Collocator> get_collocators_avg(uint32_t w1);
     string collocators2json(vector<Collocator> collocators);
 
@@ -610,6 +611,40 @@ namespace rocksdb {
                 << std::endl;
     }
 		return collocators;
+  }
+
+  void rocksdb::CollocatorDB::dumpSparseLlr(uint32_t w1, uint32_t min_cooccur) {
+		std::vector<Collocator> collocators;
+    std::stringstream stream;
+    uint64_t w2, last_w2 = 0xffffffffffffffff;
+    uint64_t maxv = 0, total_w1 = 0;
+    bool first = true;
+    for ( auto it = std::unique_ptr<CollocatorIterator>(SeekIterator(w1, 0, 0)); it->isValid(); it->Next()) {
+      uint64_t value = it->intValue(),
+        key = it->intKey();
+      w2 = W2(key);
+      total_w1 += value;
+      if(last_w2 == 0xffffffffffffffff) last_w2 = w2;
+      if (w2 != last_w2) {
+        if(maxv >= min_cooccur) {
+          double llr = calculateLLR(_vocab[w1].freq, total, maxv, _vocab[last_w2].freq);
+          if(first)
+            first = false;
+          else
+           stream << " ";
+          stream << w2  << " " << llr;
+        }
+        last_w2 = w2;
+        maxv = value;
+      } else {
+        if(value > maxv)
+          maxv = value;
+      }
+    }
+    if(first)
+      stream  << "1 0.0";
+    stream  << "\n";
+    std::cout << stream.str();
   }
 
   rocksdb::Slice rocksdb::CollocatorIterator::key() const { return base_iterator_->key(); }

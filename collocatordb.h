@@ -12,6 +12,21 @@
 
 #ifdef __cplusplus
 namespace rocksdb {
+    class Collocator {
+    public:
+    uint64_t w2;
+    uint64_t raw;
+    double pmi;
+    double npmi;
+    double llr;
+    double lfmd;
+    double fpmi;
+    double left_lfmd;
+    double right_lfmd;
+    double left_npmi;
+    double right_npmi;
+  };
+
     class CollocatorIterator : public Iterator  {
     public:
         CollocatorIterator(const Iterator& it);
@@ -27,8 +42,10 @@ namespace rocksdb {
 		extern "C" {
 			class CollocatorDB {
 			public:
-        CollocatorDB(const char *db_name);
-        ~CollocatorDB();
+        std::string getWord(uint32_t w1);
+        std::vector<Collocator> get_collocators(uint32_t w1);
+        void dumpSparseLlr(uint32_t w1, uint32_t min_cooccur);
+        CollocatorDB(const char *db_name, const bool read_only);
         void inc(const uint32_t w1, const uint32_t w2, const uint8_t dist);
         void dump(const uint32_t w1, const uint32_t w2, const uint8_t dist);
         CollocatorIterator* SeekIterator(uint64_t w1, uint64_t w2, int8_t dist);
