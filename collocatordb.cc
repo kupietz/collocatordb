@@ -112,6 +112,8 @@ namespace rocksdb {
     return log2( total * ((double) f12) / (window_size * ((double) f1) * ((double)f2) ));
   }
 
+  // Bouma, Gerlof (2009): <a href="https://svn.spraakdata.gu.se/repos/gerlof/pub/www/Docs/npmi-pfd.pdf">
+  // Normalized (pointwise) mutual information in collocation extraction</a>. In Proceedings of GSCL. 
   static inline double ca_npmi(uint64_t f1, uint64_t f2, uint64_t f12, uint64_t total, double window_size) {
     if(f12 == 0)
       return -1.0;
