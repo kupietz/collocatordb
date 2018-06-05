@@ -113,7 +113,10 @@ namespace rocksdb {
   }
 
   static inline double ca_npmi(uint64_t f1, uint64_t f2, uint64_t f12, uint64_t total, double window_size) {
-    return log2( total * ((double) f12) / (window_size * ((double) f1) * ((double)f2) )) / (-log2(((double) f12 / window_size / total)));
+    if(f12 == 0)
+      return -1.0;
+    else
+      return log2( total * ((double) f12) / (window_size * ((double) f1) * ((double)f2) )) / (-log2(((double) f12 / window_size / total)));
   }
 
   // Thanopoulos, A., Fakotakis, N., Kokkinakis, G.: Comparative evaluation of collocation extraction metrics.
@@ -124,7 +127,10 @@ namespace rocksdb {
   }
 
   static inline double ca_lfmd(uint64_t f1, uint64_t f2, uint64_t f12, uint64_t total, double window_size) {
-    return log2((double)f12 * f12 /  ((double) total * window_size * window_size * f1 * f2)) + log2((double) f12 / window_size / total);
+    if(f12 == 0)
+      return 0;
+    else
+      return log2((double)f12 * f12 /  ((double) total * window_size * window_size * f1 * f2)) + log2((double) f12 / window_size / total);
   }
 
 
