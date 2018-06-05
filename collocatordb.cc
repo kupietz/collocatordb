@@ -44,8 +44,8 @@ using namespace rocksdb;
 using namespace std;
 
 namespace rocksdb {
-  class Collocator {
-  public:
+    class Collocator {
+    public:
     uint64_t w2;
     uint64_t raw;
     double pmi;
@@ -248,6 +248,7 @@ namespace rocksdb {
     void read_vocab(string fname);
     
   public:
+    string getWord(uint32_t w1);
     CollocatorDB(const char *db_name, bool read_only);
 
     // public interface of CollocatorDB.
@@ -660,6 +661,10 @@ namespace rocksdb {
   rocksdb::Status rocksdb::CollocatorIterator::status() const { return base_iterator_->status(); }
 
 };
+
+string rocksdb::CollocatorDB::getWord(uint32_t w1) {
+  return _vocab[w1].word;
+}
 
 string rocksdb::CollocatorDB::collocators2json(vector<Collocator> collocators) {
   ostringstream s;
