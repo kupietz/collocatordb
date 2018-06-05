@@ -674,6 +674,7 @@ string rocksdb::CollocatorDB::collocators2json(vector<Collocator> collocators) {
   s << "[";
   bool first = true;
   for (Collocator c : collocators) {
+    if(strncmp(_vocab[c.w2].word.c_str(), "quot", 4) == 0) continue;
     if (i++ > 200)
       break;
     if(!first)
