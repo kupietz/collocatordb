@@ -25,12 +25,14 @@ int main(int argc, char** argv) {
   std::cerr << "Database " << argv[1] << " opened\n";
   #pragma omp parallel for schedule(dynamic, 1)
   for(uint32_t i=START; i< STOP; i++) {
-    std::vector<rocksdb::Collocator> cs = cdb.get_collocators(i);
+    std::vector<rocksdb::Collocator> cs = cdb.get_collocators(i, STOP);
     int j=0;
     for (rocksdb::Collocator c : cs) {
-      array[i*20+j] = (uint32_t) c.w2;
-      if(++j >=20)
-        break;
+      if(c.w2 != i) {
+        array[i*20+j] = (uint32_t) c.w2;
+        if(++j >=20)
+          break;
+      }
     }
     if(done++  % 100 == 0) {
       std::cerr <<"\r\033[2K"<<std::flush;
