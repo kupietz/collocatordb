@@ -332,6 +332,7 @@ namespace rocksdb {
     virtual void inc(const uint32_t w1, const uint32_t w2, const uint8_t dist);
     void dump(uint32_t w1, uint32_t w2, int8_t dist);
     vector<Collocator> get_collocators(uint32_t w1);
+    vector<Collocator> get_collocators(uint32_t w1, uint32_t max_w2);
     void dumpSparseLlr(uint32_t w1, uint32_t min_cooccur);
     vector<Collocator> get_collocators_avg(uint32_t w1);
     string collocators2json(vector<Collocator> collocators);
@@ -564,16 +565,17 @@ namespace rocksdb {
 		return collocators;
   }
 
-	std::vector<Collocator> rocksdb::CollocatorDB::get_collocators(uint32_t w1) {
+
+	std::vector<Collocator> rocksdb::CollocatorDB::get_collocators(uint32_t w1, uint32_t max_w2) {
 		std::vector<Collocator> collocators;
     uint64_t w2, last_w2 = 0xffffffffffffffff;
-    uint64_t maxv = 0, left = 0, right = 0, total_w1 = 0;
+    uint64_t maxv = 0, left = 0, right = 0;
     const double window_size = 1;
     for ( auto it = std::unique_ptr<CollocatorIterator>(SeekIterator(w1, 0, 0)); it->isValid(); it->Next()) {
       uint64_t value = it->intValue(),
         key = it->intKey();
-      w2 = W2(key);
-      total_w1 += value;
+      if((w2 = W2(key)) > max_w2)
+        continue;
       if(last_w2 == 0xffffffffffffffff) last_w2 = w2;
       if (w2 != last_w2) {
 				double pmi = ca_pmi(_vocab[w1].freq, _vocab[last_w2].freq, maxv, total, window_size);
@@ -622,6 +624,10 @@ namespace rocksdb {
     }
     */
 		return collocators;
+  }
+
+	std::vector<Collocator> rocksdb::CollocatorDB::get_collocators(uint32_t w1) {
+    return get_collocators(w1, UINT32_MAX);
   }
 
   void rocksdb::CollocatorDB::dumpSparseLlr(uint32_t w1, uint32_t min_cooccur) {

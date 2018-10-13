@@ -44,6 +44,7 @@ namespace rocksdb {
 			public:
         std::string getWord(uint32_t w1);
         std::vector<Collocator> get_collocators(uint32_t w1);
+        std::vector<Collocator> get_collocators(uint32_t w1, uint32_t max_w2);
         void dumpSparseLlr(uint32_t w1, uint32_t min_cooccur);
         CollocatorDB(const char *db_name, const bool read_only);
         void inc(const uint32_t w1, const uint32_t w2, const uint8_t dist);
