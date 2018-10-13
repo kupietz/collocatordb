@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
   FILE* pFile;
   CollocatorDB cdb = CollocatorDB(argv[1], true);
   std::cerr << "Database " << argv[1] << " opened\n";
-  #pragma omp parallel for
+  #pragma omp parallel for schedule(dynamic, 1)
   for(uint32_t i=START; i< STOP; i++) {
     std::vector<rocksdb::Collocator> cs = cdb.get_collocators(i);
     int j=0;
@@ -34,11 +34,11 @@ int main(int argc, char** argv) {
     }
     if(done++  % 100 == 0) {
       std::cerr <<"\r\033[2K"<<std::flush;
-      std::cerr << "done: " << done * 100.0 / (STOP-START) << "%" <<std::flush;
+      std::cerr << "done: " << done * 100.0 / (STOP-START) << "%" << " (todo: " << STOP-START-done << ")" << std::flush;
     }
   }
   pFile = fopen("file.binary", "wb");
-  fwrite(array, STOP*20, sizeof(uint32_t), pFile);
+  fwrite(array, sizeof(uint32_t), STOP*20, pFile);
   fclose(pFile);
   std::cout << std::flush;
 }
