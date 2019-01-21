@@ -334,7 +334,6 @@ namespace rocksdb {
     vector<Collocator> get_collocators(uint32_t w1);
     vector<Collocator> get_collocators(uint32_t w1, uint32_t max_w2);
     void dumpSparseLlr(uint32_t w1, uint32_t min_cooccur);
-    vector<Collocator> get_collocators_avg(uint32_t w1);
     string collocators2json(vector<Collocator> collocators);
 
     // mapped to a rocksdb Merge operation
@@ -518,53 +517,6 @@ namespace rocksdb {
 	bool sortByNpmi(const Collocator &lhs, const Collocator &rhs) { return lhs.npmi > rhs.npmi; }
 	bool sortByLfmd(const Collocator &lhs, const Collocator &rhs) { return lhs.lfmd > rhs.lfmd; }
 	bool sortByLlr(const Collocator &lhs, const Collocator &rhs) { return lhs.llr > rhs.llr; }
-
-	std::vector<Collocator> rocksdb::CollocatorDB::get_collocators_avg(uint32_t w1) {
-		std::vector<Collocator> collocators;
-    uint64_t w2, last_w2 = 0xffffffffffffffff;
-    uint64_t sum = 0, total_w1 = 0;
-    for ( auto it = std::unique_ptr<CollocatorIterator>(SeekIterator(w1, 0, 0)); it->isValid(); it->Next()) {
-      uint64_t value = it->intValue(),
-        key = it->intKey();
-      w2 = W2(key);
-      total_w1 += value;
-      if(last_w2 == 0xffffffffffffffff) last_w2 = w2;
-      if (w2 != last_w2) {
-				double pmi = log2( total * ((double) sum) /
-													 (AVG_WINDOW_SIZE * ((double)_vocab[w1].freq) * ((double)_vocab[last_w2].freq) ));
-        //  Thanopoulos, A., Fakotakis, N., Kokkinakis, G.: Comparative evaluation of collocation extraction metrics. In: International Conference on Language Resources and Evaluation (LREC-2002). (2002) 620–625
-        // double md = log2(pow((double)sum * AVG_WINDOW_SIZE / total, 2) /  (AVG_WINDOW_SIZE * ((double)_vocab[w1].freq/total) * ((double)_vocab[last_w2].freq/total)));
-        double md = log2((double)sum * sum /  ((double) total * AVG_WINDOW_SIZE * AVG_WINDOW_SIZE * _vocab[w1].freq * _vocab[last_w2].freq));
-        collocators.push_back ( {last_w2, sum, pmi, pmi / (-log2(((double) sum / AVG_WINDOW_SIZE / total))), /* normalize to [-1,1] */
-							calculateLLR(_vocab[w1].freq, total, sum, _vocab[last_w2].freq), md, md + log2((double)sum / AVG_WINDOW_SIZE / total), pmi*sum/total/AVG_WINDOW_SIZE} );
-        last_w2 = w2;
-        sum = value;
-      } else {
-        sum += value;
-      }
-    }
-
-		sort(collocators.begin(), collocators.end(), sortByNpmi);
-		
-    int i=0;
-    for (Collocator c : collocators) {
-      if(i++>10) break;
-      std::cout << "dont call me w1:" << _vocab[w1].word << ", w2:" << _vocab[c.w2].word
-                << "\t f(w1):" << _vocab[w1].freq
-                << "\t f(w2):" << _vocab[c.w2].freq
-                << "\t f(w1, x):" << total_w1
-                << "\t f(w1, w2):" << c.raw
-                << "\t pmi:" << c.pmi
-                << "\t npmi:" << c.npmi
-                << "\t llr:" << c.llr
-                << "\t lfmd:" << c.lfmd
-                << "\t fpmi:" << c.fpmi
-                << "\t total:" << total
-                << std::endl;
-    }
-		return collocators;
-  }
-
 
 	std::vector<Collocator> rocksdb::CollocatorDB::get_collocators(uint32_t w1, uint32_t max_w2) {
 		std::vector<Collocator> collocators;
