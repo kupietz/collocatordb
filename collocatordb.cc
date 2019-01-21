@@ -22,8 +22,7 @@
 #include "rocksdb/filter_policy.h"
 #include "merge_operators.h"
 
-#define AVG_WINDOW_SIZE 7
-
+#define WINDOW_SIZE 5.0
 #define IS_BIG_ENDIAN (*(uint16_t *)"\0\xff" < 0x100)
 #define encodeCollocation(w1, w2, dist) (((uint64_t)dist << 56) | ((uint64_t)w2 << 24) | w1)
 #define W1(key) (uint64_t)(key & 0xffffff)
@@ -248,6 +247,7 @@ namespace rocksdb {
     vector<VocabEntry> _vocab;
     uint64_t total = 0;
     uint64_t sentences = 0;
+    float avg_window_size = 8.0;
     
   protected:
     std::shared_ptr<DB> db_;
