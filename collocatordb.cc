@@ -135,6 +135,20 @@ namespace rocksdb {
       return log2((double)f12 * f12 /  ((double) total * window_size * window_size * f1 * f2)) + log2((double) f12 / window_size / total);
   }
 
+  // Evert, Stefan (2004): The Statistics of Word Cooccurrences: Word Pairs and Collocations. PhD dissertation, IMS, University of Stuttgart. Published in 2005, URN urn:nbn:de:bsz:93-opus-23714. 
+  // Free PDF available from http://purl.org/stefan.evert/PUB/Evert2004phd.pdf
+  static inline double ca_ll(uint64_t w1, uint64_t w2, uint64_t w12, uint64_t n, uint64_t window_size) {
+    double
+      r1 = (double) w1 * window_size,
+      r2 = (double) n - r1,
+      c1 = w2,
+      c2 = n - c1,
+      o11 = w12,          o12 = r1 - o11,
+      o21 = c1 - w12,     o22 = r2 - o21,
+      e11 = r1 * c1 / n,  e12 = r1 * c2 / n,
+      e21 = r2 * c1 / n,  e22 = r2 * c2 / n;
+    return (2 * ( (o11>0? o11 * log(o11/e11):0) + (o12>0? o12 * log(o12/e12):0) + (o21>0? o21 * log(o21/e21):0) + (o22>0? o22 * log(o22/e22):0)));
+  }
 
   class CountMergeOperator : public AssociativeMergeOperator {
   public:
@@ -495,48 +509,6 @@ namespace rocksdb {
     std::cout << "ready dumping\n";
   }
 
-  double calculateLLR(uint64_t f_X_, uint64_t uintN, uint64_t f_X_Y_, uint64_t f_Y_) {
-    double f_e_, f_o_;
-    double A=0.0, B=0.0, C=0.0, D=0.0, N=0.0;
-    double LLR=0.0, statVal=0.0, minusDiffCoeff=0.0;
-    double BlogB=0.0, ClogC=0.0;
-
-    N = (double)uintN;
-    A = (double)f_X_Y_;
-    B = (double)f_X_   -A;
-    C = (double)f_Y_   -A;
-    D = (double)N      -A-B-C;;
-
-    if (B > 0.) BlogB = B*log(B);
-    if (C > 0.) ClogC = C*log(C);
-
-    if ((A>0.) && (D>0.) && (N>0.))	{
-      f_e_ = (double)f_X_  /(double)N;
-      f_o_ = (double)f_X_Y_/(double)f_Y_;
-
-      minusDiffCoeff =
-        (	f_X_==0 ?   (double)((-1)*f_X_Y_) :
-          (	f_X_Y_==0 ? (double)((+1)*f_X_) :
-            (f_e_-f_o_)/(f_e_+f_o_)
-            )
-          );
-
-      /* log likelihood ratio */
-      LLR     =  2*( A*log(A)
-                     +BlogB
-                     +ClogC
-                     +D*log(D)
-                     -(A+B)*log(A+B)
-                     -(A+C)*log(A+C)
-                     -(B+D)*log(B+D)
-                     -(C+D)*log(C+D)
-                     +N*log(N)
-                     );
-    }
-    return(minusDiffCoeff > 0 ? 0 : (statVal=LLR));
-  }
-
-	
 	bool sortByNpmi(const Collocator &lhs, const Collocator &rhs) { return lhs.npmi > rhs.npmi; }
 	bool sortByLfmd(const Collocator &lhs, const Collocator &rhs) { return lhs.lfmd > rhs.lfmd; }
 	bool sortByLlr(const Collocator &lhs, const Collocator &rhs) { return lhs.llr > rhs.llr; }
@@ -619,7 +591,7 @@ namespace rocksdb {
       if(last_w2 == 0xffffffffffffffff) last_w2 = w2;
       if (w2 != last_w2) {
         if(maxv >= min_cooccur) {
-          double llr = calculateLLR(_vocab[w1].freq, total, maxv, _vocab[last_w2].freq);
+          double llr = ca_ll(_vocab[w1].freq, _vocab[last_w2].freq,  maxv, total, 1);
           if(first)
             first = false;
           else
