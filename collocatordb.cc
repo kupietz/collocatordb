@@ -232,7 +232,8 @@ namespace rocksdb {
     char _one[sizeof(uint64_t)];
     Slice _one_slice;
     vector<VocabEntry> _vocab;
-    uint64_t total;
+    uint64_t total = 0;
+    uint64_t sentences = 0;
     
   protected:
     std::shared_ptr<DB> db_;
@@ -386,6 +387,28 @@ namespace rocksdb {
       i++;
     }
     fclose(fin);
+
+    char size_fname[256];
+    strcpy(size_fname, fname.c_str());
+    char *pos = strstr(size_fname, ".vocab");
+    if(pos) {
+      *pos=0;
+      strcat(size_fname, ".size");
+      FILE *fp = fopen(size_fname, "r");
+      if (fp != NULL) {
+        fscanf(fp, "%lu", &sentences);
+        fscanf(fp, "%lu", &total);
+        float sl = (float)total/(float)sentences;
+        float w = WINDOW_SIZE;
+        avg_window_size = ((sl > 2*w? (sl-2*w)*2*w: 0) + (double) w * (3*w -1)) / sl;
+        fprintf(stdout, "Size corrections found: corpus size: %lu tokens in %lu sentences, avg. sentence size: %f, avg. window size: %f\n", total, sentences, sl, avg_window_size);
+        fclose(fp);
+      } else {
+        std::cout <<  "size file " << size_fname << " not found\n";
+      }
+    } else {
+      std::cout <<  "cannot determine size file " << size_fname << "\n";
+    }
   }
 
   std::shared_ptr<DB> rocksdb::CollocatorDB::OpenDbForRead(const char *name) {
