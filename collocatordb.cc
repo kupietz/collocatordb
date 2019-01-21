@@ -23,6 +23,7 @@
 #include "merge_operators.h"
 
 #define WINDOW_SIZE 5.0
+#define FREQUENCY_THRESHOLD 5
 #define IS_BIG_ENDIAN (*(uint16_t *)"\0\xff" < 0x100)
 #define encodeCollocation(w1, w2, dist) (((uint64_t)dist << 56) | ((uint64_t)w2 << 24) | w1)
 #define W1(key) (uint64_t)(key & 0xffffff)
@@ -516,8 +517,8 @@ namespace rocksdb {
 	std::vector<Collocator> rocksdb::CollocatorDB::get_collocators(uint32_t w1, uint32_t max_w2) {
 		std::vector<Collocator> collocators;
     uint64_t w2, last_w2 = 0xffffffffffffffff;
-    uint64_t maxv = 0, left = 0, right = 0;
-    const double window_size = 1;
+    uint64_t maxv = 0, sum = 0, left = 0, right = 0;
+
     for ( auto it = std::unique_ptr<CollocatorIterator>(SeekIterator(w1, 0, 0)); it->isValid(); it->Next()) {
       uint64_t value = it->intValue(),
         key = it->intKey();
@@ -525,22 +526,32 @@ namespace rocksdb {
         continue;
       if(last_w2 == 0xffffffffffffffff) last_w2 = w2;
       if (w2 != last_w2) {
-				double pmi = ca_pmi(_vocab[w1].freq, _vocab[last_w2].freq, maxv, total, window_size);
-        double lfmd = ca_lfmd(_vocab[w1].freq, _vocab[last_w2].freq, maxv, total, window_size);
-        double left_lfmd = ca_lfmd(_vocab[w1].freq, _vocab[last_w2].freq, left, total, 1);
-        double right_lfmd = ca_lfmd(_vocab[w1].freq, _vocab[last_w2].freq, right, total, 1);
-        double left_npmi = ca_npmi(_vocab[w1].freq, _vocab[last_w2].freq, left, total, 1);
-        double right_npmi = ca_npmi(_vocab[w1].freq, _vocab[last_w2].freq, right, total, 1);
-        collocators.push_back ( {last_w2, maxv, pmi, pmi / (-log2(((double) maxv / window_size / total))), /* normalize to [-1,1] */
-							calculateLLR(_vocab[w1].freq, total, maxv, _vocab[last_w2].freq), lfmd, pmi*maxv/total/window_size,
-              left_lfmd,
-              right_lfmd,
-              left_npmi,
-              right_npmi}
-          );
+        if(sum >= FREQUENCY_THRESHOLD) {
+          double o = sum,
+            r1 = (double)_vocab[w1].freq * avg_window_size,
+            c1 = (double)_vocab[last_w2].freq,
+            e = r1 * c1 / total,
+            pmi = log2(o/e),
+            md = log2(o*o/e),
+            lfmd = log2(o*o*o/e),
+            llr = ca_ll((double)_vocab[w1].freq, (double)_vocab[last_w2].freq, sum, total, avg_window_size);
+          double left_lfmd = ca_lfmd(_vocab[w1].freq, _vocab[last_w2].freq, left, total, 1);
+          double right_lfmd = ca_lfmd(_vocab[w1].freq, _vocab[last_w2].freq, right, total, 1);
+          double left_npmi = ca_npmi(_vocab[w1].freq, _vocab[last_w2].freq, left, total, 1);
+          double right_npmi = ca_npmi(_vocab[w1].freq, _vocab[last_w2].freq, right, total, 1);
+          collocators.push_back ( {last_w2, sum, pmi, pmi / (-log2(o)), /* normalize to [-1,1] */
+                llr, lfmd, md,
+                left_lfmd,
+                right_lfmd,
+                left_npmi,
+                right_npmi}
+            );
+        }
         last_w2 = w2;
         maxv = value;
+        sum = value;
       } else {
+        sum += value;
         if(value > maxv)
           maxv = value;
       }
