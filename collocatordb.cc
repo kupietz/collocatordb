@@ -22,7 +22,7 @@
 #include "rocksdb/filter_policy.h"
 #include "merge_operators.h"
 
-#define WINDOW_SIZE 5.0
+#define WINDOW_SIZE 5
 #define FREQUENCY_THRESHOLD 5
 #define IS_BIG_ENDIAN (*(uint16_t *)"\0\xff" < 0x100)
 #define encodeCollocation(w1, w2, dist) (((uint64_t)dist << 56) | ((uint64_t)w2 << 24) | w1)
@@ -59,6 +59,8 @@ namespace rocksdb {
     double right_npmi;
     double dice;
     double logdice;
+    double af;
+    int window;
   };
 
   size_t num_merge_operator_calls;
@@ -554,10 +556,11 @@ namespace rocksdb {
 	bool sortByLlr(const Collocator &lhs, const Collocator &rhs) { return lhs.llr > rhs.llr; }
 	bool sortByLogDice(const Collocator &lhs, const Collocator &rhs) { return lhs.logdice > rhs.logdice; }
 
-	std::vector<Collocator> rocksdb::CollocatorDB::get_collocators(uint32_t w1, uint32_t max_w2) {
-		std::vector<Collocator> collocators;
+  std::vector<Collocator> rocksdb::CollocatorDB::get_collocators(uint32_t w1, uint32_t max_w2) {
+    std::vector<Collocator> collocators;
     uint64_t w2, last_w2 = 0xffffffffffffffff;
     uint64_t maxv = 0, sum = 0, left = 0, right = 0;
+    uint64_t sumWindow[2*WINDOW_SIZE+1] = {};
 
     for ( auto it = std::unique_ptr<CollocatorIterator>(SeekIterator(w1, 0, 0)); it->isValid(); it->Next()) {
       uint64_t value = it->intValue(),
@@ -566,7 +569,8 @@ namespace rocksdb {
         continue;
       if(last_w2 == 0xffffffffffffffff) last_w2 = w2;
       if (w2 != last_w2) {
-        if(sum >= FREQUENCY_THRESHOLD) {
+        if (sum >= FREQUENCY_THRESHOLD) {
+          uint64_t f1 = _vocab[w1].freq, f2 = _vocab[last_w2].freq;
           double o = sum,
             r1 = (double)_vocab[w1].freq * avg_window_size,
             c1 = (double)_vocab[last_w2].freq,
@@ -574,22 +578,42 @@ namespace rocksdb {
             pmi = log2(o/e),
             md = log2(o*o/e),
             lfmd = log2(o*o*o/e),
-            llr = ca_ll((double)_vocab[w1].freq, (double)_vocab[last_w2].freq, sum, total, avg_window_size);
-          double left_lfmd = ca_lfmd(_vocab[w1].freq, _vocab[last_w2].freq, left, total, 1);
-          double right_lfmd = ca_lfmd(_vocab[w1].freq, _vocab[last_w2].freq, right, total, 1);
-          double left_npmi = ca_npmi(_vocab[w1].freq, _vocab[last_w2].freq, left, total, 1);
-          double right_npmi = ca_npmi(_vocab[w1].freq, _vocab[last_w2].freq, right, total, 1);
+            llr = ca_ll(f1, f2, sum, total, avg_window_size);
+          double left_lfmd = ca_lfmd(f1, f2, left, total, 1);
+          double right_lfmd = ca_lfmd(f1, f2, right, total, 1);
+          double left_npmi = ca_npmi(f1, f2, left, total, 1);
+          double right_npmi = ca_npmi(f1, f2, right, total, 1);
+
+          int bestWindow = (1 << (2*WINDOW_SIZE)) - 1;
+          double bestAF = ca_logdice(f1, f2, sum, total, 2*WINDOW_SIZE);
+          double currentAF;
+          for (int bitmask=1; bitmask < (1 << (2*WINDOW_SIZE)); bitmask++) {
+            uint64_t currentWindowSum=0;
+            for (int pos=0; pos < 2*WINDOW_SIZE; pos++) {
+              if (((1<<pos) & bitmask) != 0)
+                currentWindowSum+=sumWindow[pos];
+            }
+            currentAF = ca_logdice(f1, f2, currentWindowSum, total, __builtin_popcount(bitmask));
+            if(currentAF > bestAF) {
+              bestAF = currentAF;
+              bestWindow = bitmask;
+            }
+          }
           collocators.push_back ( {last_w2, sum, pmi, pmi / (-log2(o/total/avg_window_size)), /* normalize to [-1,1] */
                 llr, lfmd, md,
                 left_lfmd,
                 right_lfmd,
                 left_npmi,
                 right_npmi,
-                ca_dice((double)_vocab[w1].freq, (double)_vocab[last_w2].freq, sum, total, avg_window_size),
-                ca_logdice((double)_vocab[w1].freq, (double)_vocab[last_w2].freq, sum, total, avg_window_size)
+                ca_dice(f1, f2, sum, total, avg_window_size),
+                ca_logdice(f1, f2, sum, total, avg_window_size),
+                bestAF,
+                bestWindow
                 }
             );
         }
+        memset(sumWindow, 0, 2*WINDOW_SIZE * sizeof(uint64_t));
+        sumWindow[-DIST(key)+WINDOW_SIZE-(DIST(key)<0?1:0)] = value;
         last_w2 = w2;
         maxv = value;
         sum = value;
@@ -597,6 +621,7 @@ namespace rocksdb {
         sum += value;
         if(value > maxv)
           maxv = value;
+        sumWindow[-DIST(key)+WINDOW_SIZE-(DIST(key)<0?1:0)] = value;
       }
       if(DIST(key) == -1)
         left = value;
@@ -702,7 +727,9 @@ string rocksdb::CollocatorDB::collocators2json(vector<Collocator> collocators) {
       "\"llfmd\":" << c.left_lfmd  << "," <<
       "\"rlfmd\":" << c.right_lfmd  << "," <<
       "\"lnpmi\":" << c.left_npmi  << "," <<
-      "\"rnpmi\":" << c.right_npmi  <<
+      "\"rnpmi\":" << c.right_npmi  << "," <<
+      "\"af\":" << c.af  << "," <<
+      "\"win\":" << c.window  <<
       "}";
   }
   s << "]\n";
