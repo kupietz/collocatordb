@@ -561,6 +561,7 @@ namespace rocksdb {
     uint64_t w2, last_w2 = 0xffffffffffffffff;
     uint64_t maxv = 0, sum = 0, left = 0, right = 0;
     uint64_t sumWindow[2*WINDOW_SIZE+1] = {};
+    int true_window_size = 1;
 
     for ( auto it = std::unique_ptr<CollocatorIterator>(SeekIterator(w1, 0, 0)); it->isValid(); it->Next()) {
       uint64_t value = it->intValue(),
@@ -572,13 +573,13 @@ namespace rocksdb {
         if (sum >= FREQUENCY_THRESHOLD) {
           uint64_t f1 = _vocab[w1].freq, f2 = _vocab[last_w2].freq;
           double o = sum,
-            r1 = (double)_vocab[w1].freq * avg_window_size,
+            r1 = (double)_vocab[w1].freq * true_window_size,
             c1 = (double)_vocab[last_w2].freq,
             e = r1 * c1 / total,
             pmi = log2(o/e),
             md = log2(o*o/e),
             lfmd = log2(o*o*o/e),
-            llr = ca_ll(f1, f2, sum, total, avg_window_size);
+            llr = ca_ll(f1, f2, sum, total, true_window_size);
           double left_lfmd = ca_lfmd(f1, f2, left, total, 1);
           double right_lfmd = ca_lfmd(f1, f2, right, total, 1);
           double left_npmi = ca_npmi(f1, f2, left, total, 1);
@@ -599,14 +600,14 @@ namespace rocksdb {
               bestWindow = bitmask;
             }
           }
-          collocators.push_back ( {last_w2, sum, pmi, pmi / (-log2(o/total/avg_window_size)), /* normalize to [-1,1] */
+          collocators.push_back ( {last_w2, sum, pmi, pmi / (-log2(o/total/true_window_size)), /* normalize to [-1,1] */
                 llr, lfmd, md,
                 left_lfmd,
                 right_lfmd,
                 left_npmi,
                 right_npmi,
-                ca_dice(f1, f2, sum, total, avg_window_size),
-                ca_logdice(f1, f2, sum, total, avg_window_size),
+                ca_dice(f1, f2, sum, total, true_window_size),
+                ca_logdice(f1, f2, sum, total, true_window_size),
                 bestAF,
                 bestWindow
                 }
@@ -617,11 +618,13 @@ namespace rocksdb {
         last_w2 = w2;
         maxv = value;
         sum = value;
+        true_window_size = 1;
       } else {
         sum += value;
         if(value > maxv)
           maxv = value;
         sumWindow[-DIST(key)+WINDOW_SIZE-(DIST(key)<0?1:0)] = value;
+        true_window_size++;
       }
       if(DIST(key) == -1)
         left = value;
