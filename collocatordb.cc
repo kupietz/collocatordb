@@ -689,7 +689,7 @@ string rocksdb::CollocatorDB::collocators2json(vector<Collocator> collocators) {
     else
       first = false;
     s << "{"
-      "\"word\":\"" << string(_vocab[c.w2].word) << "\"," <<
+      "\"word\":\"" << (string(_vocab[c.w2].word).compare("<num>") == 0? string("###") : string(_vocab[c.w2].word)) << "\"," <<
       "\"rank\":" << c.w2    << "," <<
       "\"f\":" << c.raw    << "," <<
       "\"npmi\":" << c.npmi  << "," <<
