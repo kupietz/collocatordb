@@ -552,7 +552,7 @@ namespace rocksdb {
 	bool sortByNpmi(const Collocator &lhs, const Collocator &rhs) { return lhs.npmi > rhs.npmi; }
 	bool sortByLfmd(const Collocator &lhs, const Collocator &rhs) { return lhs.lfmd > rhs.lfmd; }
 	bool sortByLlr(const Collocator &lhs, const Collocator &rhs) { return lhs.llr > rhs.llr; }
-	bool sortByLogDice(const Collocator &lhs, const Collocator &rhs) { return lhs.logdoce > rhs.logdice; }
+	bool sortByLogDice(const Collocator &lhs, const Collocator &rhs) { return lhs.logdice > rhs.logdice; }
 
 	std::vector<Collocator> rocksdb::CollocatorDB::get_collocators(uint32_t w1, uint32_t max_w2) {
 		std::vector<Collocator> collocators;
