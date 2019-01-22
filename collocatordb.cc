@@ -52,11 +52,13 @@ namespace rocksdb {
     double npmi;
     double llr;
     double lfmd;
-    double fpmi;
+    double md;
     double left_lfmd;
     double right_lfmd;
     double left_npmi;
     double right_npmi;
+    double dice;
+    double logdice;
   };
 
   size_t num_merge_operator_calls;
@@ -148,6 +150,23 @@ namespace rocksdb {
       e11 = r1 * c1 / n,  e12 = r1 * c2 / n,
       e21 = r2 * c1 / n,  e22 = r2 * c2 / n;
     return (2 * ( (o11>0? o11 * log(o11/e11):0) + (o12>0? o12 * log(o12/e12):0) + (o21>0? o21 * log(o21/e21):0) + (o22>0? o22 * log(o22/e22):0)));
+  }
+
+
+  static inline double ca_dice(uint64_t w1, uint64_t w2, uint64_t w12, uint64_t n, uint64_t window_size) {
+    double
+      r1 = (double) w1 * window_size,
+      c1 = w2;
+    return 2 * w12 / (c1+r1);
+  }
+
+  // Rychlý, Pavel (2008): <a href="http://www.fi.muni.cz/usr/sojka/download/raslan2008/13.pdf">A lexicographer-friendly association score.</a> In Proceedings of Recent Advances in Slavonic Natural Language Processing, RASLAN, 6–9.
+  static inline double ca_logdice(uint64_t w1, uint64_t w2, uint64_t w12, uint64_t n, uint64_t window_size) {
+    double
+      e = 0.5,
+      r1 = (double) w1 * window_size,
+      c1 = w2;
+    return 14 + log2(2 * (w12+e) / (c1+e+r1+e));
   }
 
   class CountMergeOperator : public AssociativeMergeOperator {
@@ -539,12 +558,15 @@ namespace rocksdb {
           double right_lfmd = ca_lfmd(_vocab[w1].freq, _vocab[last_w2].freq, right, total, 1);
           double left_npmi = ca_npmi(_vocab[w1].freq, _vocab[last_w2].freq, left, total, 1);
           double right_npmi = ca_npmi(_vocab[w1].freq, _vocab[last_w2].freq, right, total, 1);
-          collocators.push_back ( {last_w2, sum, pmi, pmi / (-log2(o)), /* normalize to [-1,1] */
+          collocators.push_back ( {last_w2, sum, pmi, pmi / (-log2(o/total/avg_window_size)), /* normalize to [-1,1] */
                 llr, lfmd, md,
                 left_lfmd,
                 right_lfmd,
                 left_npmi,
-                right_npmi}
+                right_npmi,
+                ca_dice((double)_vocab[w1].freq, (double)_vocab[last_w2].freq, sum, total, avg_window_size),
+                ca_logdice((double)_vocab[w1].freq, (double)_vocab[last_w2].freq, sum, total, avg_window_size)
+                }
             );
         }
         last_w2 = w2;
@@ -650,9 +672,12 @@ string rocksdb::CollocatorDB::collocators2json(vector<Collocator> collocators) {
       "\"rank\":" << c.w2    << "," <<
       "\"f\":" << c.raw    << "," <<
       "\"npmi\":" << c.npmi  << "," <<
+      "\"pmi\":" << c.pmi  << "," <<
       "\"llr\":" << c.llr   << "," <<
       "\"lfmd\":" << c.lfmd  << "," <<
-      "\"fpmi\":" << c.fpmi  << "," <<
+      "\"md\":" << c.md  << "," <<
+      "\"dice\":" << c.dice  << "," <<
+      "\"ld\":" << c.logdice  << "," <<
       "\"llfmd\":" << c.left_lfmd  << "," <<
       "\"rlfmd\":" << c.right_lfmd  << "," <<
       "\"lnpmi\":" << c.left_npmi  << "," <<

@@ -20,11 +20,13 @@ namespace rocksdb {
     double npmi;
     double llr;
     double lfmd;
-    double fpmi;
+    double md;
     double left_lfmd;
     double right_lfmd;
     double left_npmi;
     double right_npmi;
+    double dice;
+    double logdice;
   };
 
     class CollocatorIterator : public Iterator  {
