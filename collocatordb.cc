@@ -111,30 +111,50 @@ namespace rocksdb {
   }
 
   static inline double ca_pmi(uint64_t f1, uint64_t f2, uint64_t f12, uint64_t total, double window_size) {
-    return log2( total * ((double) f12) / (window_size * ((double) f1) * ((double)f2) ));
+    double
+      r1 = f1 * window_size,
+      c1 = f2,
+      e = r1 * c1 / total,
+      o = f12;
+    return log2(o/e);
   }
 
   // Bouma, Gerlof (2009): <a href="https://svn.spraakdata.gu.se/repos/gerlof/pub/www/Docs/npmi-pfd.pdf">
   // Normalized (pointwise) mutual information in collocation extraction</a>. In Proceedings of GSCL. 
   static inline double ca_npmi(uint64_t f1, uint64_t f2, uint64_t f12, uint64_t total, double window_size) {
-    if(f12 == 0)
+    double
+      r1 = f1 * window_size,
+      c1 = f2,
+      e = r1 * c1 / total,
+      o = f12;
+    if(f12 < FREQUENCY_THRESHOLD)
       return -1.0;
     else
-      return log2( total * ((double) f12) / (window_size * ((double) f1) * ((double)f2) )) / (-log2(((double) f12 / window_size / total)));
+      return log2(o/e) / (-log2(o/total/window_size));
   }
 
   // Thanopoulos, A., Fakotakis, N., Kokkinakis, G.: Comparative evaluation of collocation extraction metrics.
   // In: International Conference on Language Resources and Evaluation (LREC-2002). (2002) 620–625
   // double md = log2(pow((double)max * window_size / total, 2) /  (window_size * ((double)_vocab[w1].freq/total) * ((double)_vocab[last_w2].freq/total)));
   static inline double ca_md(uint64_t f1, uint64_t f2, uint64_t f12, uint64_t total, double window_size) {
-    return log2((double)f12 * f12 /  ((double) total * window_size * window_size * f1 * f2));
+    double
+      r1 = f1 * window_size,
+      c1 = f2,
+      e = r1 * c1 / total,
+      o = f12;
+    return log2(o*o/e);
   }
 
   static inline double ca_lfmd(uint64_t f1, uint64_t f2, uint64_t f12, uint64_t total, double window_size) {
+    double
+      r1 = f1 * window_size,
+      c1 = f2,
+      e = r1 * c1 / total,
+      o = f12;
     if(f12 == 0)
       return 0;
     else
-      return log2((double)f12 * f12 /  ((double) total * window_size * window_size * f1 * f2)) + log2((double) f12 / window_size / total);
+      return log2(o*o*o/e);
   }
 
   // Evert, Stefan (2004): The Statistics of Word Cooccurrences: Word Pairs and Collocations. PhD dissertation, IMS, University of Stuttgart. Published in 2005, URN urn:nbn:de:bsz:93-opus-23714. 
