@@ -47,6 +47,7 @@ namespace rocksdb {
     class Collocator {
     public:
     uint64_t w2;
+    uint64_t f2;
     uint64_t raw;
     double pmi;
     double npmi;
@@ -600,7 +601,8 @@ namespace rocksdb {
               bestWindow = bitmask;
             }
           }
-          collocators.push_back ( {last_w2, sum, pmi, pmi / (-log2(o/total/true_window_size)), /* normalize to [-1,1] */
+          collocators.push_back ( {last_w2, f2, sum,
+                pmi, pmi / (-log2(o/total/true_window_size)), /* normalize to [-1,1] */
                 llr, lfmd, md,
                 left_lfmd,
                 right_lfmd,
@@ -718,7 +720,7 @@ string rocksdb::CollocatorDB::collocators2json(vector<Collocator> collocators) {
       first = false;
     s << "{"
       "\"word\":\"" << (string(_vocab[c.w2].word).compare("<num>") == 0? string("###") : string(_vocab[c.w2].word)) << "\"," <<
-      "\"rank\":" << c.w2    << "," <<
+      "\"f2\":" << c.f2    << "," <<
       "\"f\":" << c.raw    << "," <<
       "\"npmi\":" << c.npmi  << "," <<
       "\"pmi\":" << c.pmi  << "," <<

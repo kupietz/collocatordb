@@ -15,6 +15,7 @@ namespace rocksdb {
     class Collocator {
     public:
     uint64_t w2;
+    uint64_t f2;
     uint64_t raw;
     double pmi;
     double npmi;
