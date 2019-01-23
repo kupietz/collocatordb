@@ -563,6 +563,7 @@ namespace rocksdb {
     uint64_t maxv = 0, sum = 0, left = 0, right = 0;
     uint64_t sumWindow[2*WINDOW_SIZE+1] = {};
     int true_window_size = 1;
+    int usedPositions=0;
 
     for ( auto it = std::unique_ptr<CollocatorIterator>(SeekIterator(w1, 0, 0)); it->isValid(); it->Next()) {
       uint64_t value = it->intValue(),
@@ -586,13 +587,15 @@ namespace rocksdb {
           double left_npmi = ca_npmi(f1, f2, left, total, 1);
           double right_npmi = ca_npmi(f1, f2, right, total, 1);
 
-          int bestWindow = (1 << (2*WINDOW_SIZE)) - 1;
-          double bestAF = ca_logdice(f1, f2, sum, total, 2*WINDOW_SIZE);
+          int bestWindow = usedPositions; // (1 << (2*WINDOW_SIZE)) - 1;
+          double bestAF = ca_logdice(f1, f2, sum, total, true_window_size);
           double currentAF;
+          if(f1<75000000)
           for (int bitmask=1; bitmask < (1 << (2*WINDOW_SIZE)); bitmask++) {
+            if((bitmask & usedPositions) == 0 || (bitmask & ~usedPositions) > 0) continue;
             uint64_t currentWindowSum=0;
             for (int pos=0; pos < 2*WINDOW_SIZE; pos++) {
-              if (((1<<pos) & bitmask) != 0)
+              if (((1<<pos) & bitmask & usedPositions) != 0)
                 currentWindowSum+=sumWindow[pos];
             }
             currentAF = ca_logdice(f1, f2, currentWindowSum, total, __builtin_popcount(bitmask));
@@ -616,6 +619,7 @@ namespace rocksdb {
             );
         }
         memset(sumWindow, 0, 2*WINDOW_SIZE * sizeof(uint64_t));
+        usedPositions = 1 << (-DIST(key)+WINDOW_SIZE-(DIST(key)<0?1:0));
         sumWindow[-DIST(key)+WINDOW_SIZE-(DIST(key)<0?1:0)] = value;
         last_w2 = w2;
         maxv = value;
@@ -625,6 +629,7 @@ namespace rocksdb {
         sum += value;
         if(value > maxv)
           maxv = value;
+        usedPositions |= 1 << (-DIST(key)+WINDOW_SIZE-(DIST(key)<0?1:0));
         sumWindow[-DIST(key)+WINDOW_SIZE-(DIST(key)<0?1:0)] = value;
         true_window_size++;
       }
