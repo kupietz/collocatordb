@@ -28,6 +28,9 @@ namespace rocksdb {
     double right_npmi;
     double dice;
     double logdice;
+    double af;
+    int window;
+    int af_window;
   };
 
     class CollocatorIterator : public Iterator  {

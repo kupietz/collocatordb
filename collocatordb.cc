@@ -62,6 +62,7 @@ namespace rocksdb {
     double logdice;
     double af;
     int window;
+    int af_window;
   };
 
   size_t num_merge_operator_calls;
@@ -586,9 +587,10 @@ namespace rocksdb {
           double right_lfmd = ca_lfmd(f1, f2, right, total, 1);
           double left_npmi = ca_npmi(f1, f2, left, total, 1);
           double right_npmi = ca_npmi(f1, f2, right, total, 1);
+          double ld =  ca_logdice(f1, f2, sum, total, true_window_size);
 
-          int bestWindow = usedPositions; // (1 << (2*WINDOW_SIZE)) - 1;
-          double bestAF = ca_logdice(f1, f2, sum, total, true_window_size);
+          int bestWindow = usedPositions;
+          double bestAF = ld;
           double currentAF;
           if(f1<75000000)
           for (int bitmask=1; bitmask < (1 << (2*WINDOW_SIZE)); bitmask++) {
@@ -612,8 +614,9 @@ namespace rocksdb {
                 left_npmi,
                 right_npmi,
                 ca_dice(f1, f2, sum, total, true_window_size),
-                ca_logdice(f1, f2, sum, total, true_window_size),
+                ld,
                 bestAF,
+                usedPositions,
                 bestWindow
                 }
             );
@@ -738,8 +741,9 @@ string rocksdb::CollocatorDB::collocators2json(vector<Collocator> collocators) {
       "\"rlfmd\":" << c.right_lfmd  << "," <<
       "\"lnpmi\":" << c.left_npmi  << "," <<
       "\"rnpmi\":" << c.right_npmi  << "," <<
-      "\"af\":" << c.af  << "," <<
-      "\"win\":" << c.window  <<
+      "\"af\":" << c.af << "," <<
+      "\"win\":" << c.window << "," <<
+      "\"afwin\":" << c.af_window  <<
       "}";
   }
   s << "]\n";
