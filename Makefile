@@ -39,7 +39,7 @@ libcollocatordb.a: $(LIBOBJECTS)
 	$(AM_V_at)$(AR) $(ARFLAGS) $@ $(LIBOBJECTS)
 
 libcollocatordb.so.1: collocatordb.cc
-	$(CXX) $(CXXFLAGS) -c collocatordb.cc -Wl,-soname=libcollocatordb.so.1 -Wl,--version-script=collocatordb.exmap -shared -fPIC -o libcollocatordb.so.1
+	$(CXX) $(CXXFLAGS) -D_GLIBCXX_PARALLEL -march=native -Ofast -fopenmp -c collocatordb.cc -Wl,-soname=libcollocatordb.so.1 -Wl,--version-script=collocatordb.exmap -shared -fPIC -o libcollocatordb.so.1
 
 .cc.o:
 	$(CXX) $(CXXFLAGS) -c $< -o$@ $(PLATFORM_CXXFLAGS)
