@@ -46,7 +46,7 @@ using namespace std;
 namespace rocksdb {
     class Collocator {
     public:
-    uint64_t w2;
+    uint32_t w2;
     uint64_t f2;
     uint64_t raw;
     double pmi;
@@ -392,6 +392,8 @@ namespace rocksdb {
     void dump(uint32_t w1, uint32_t w2, int8_t dist);
     vector<Collocator> get_collocators(uint32_t w1);
     vector<Collocator> get_collocators(uint32_t w1, uint32_t max_w2);
+    void applyCAMeasures(const uint32_t w1, const uint32_t w2,  uint64_t *sumWindow, const uint64_t sum, const int usedPositions, int true_window_size, rocksdb::Collocator *result);
+
     void dumpSparseLlr(uint32_t w1, uint32_t min_cooccur);
     string collocators2json(vector<Collocator> collocators);
 
@@ -558,14 +560,67 @@ namespace rocksdb {
 	bool sortByLlr(const Collocator &lhs, const Collocator &rhs) { return lhs.llr > rhs.llr; }
 	bool sortByLogDice(const Collocator &lhs, const Collocator &rhs) { return lhs.logdice > rhs.logdice; }
 
+
+  void rocksdb::CollocatorDB::applyCAMeasures(const uint32_t w1, const uint32_t w2,  uint64_t *sumWindow,
+                                              const uint64_t sum, const int usedPositions, int true_window_size, rocksdb::Collocator *result) {
+    uint64_t f1 = _vocab[w1].freq, f2 = _vocab[w2].freq;
+    double o = sum,
+      r1 = f1 * true_window_size,
+      c1 = f2,
+      e = r1 * c1 / total,
+      pmi = log2(o/e),
+      md = log2(o*o/e),
+      lfmd = log2(o*o*o/e),
+      llr = ca_ll(f1, f2, sum, total, true_window_size);
+    double ld =  ca_logdice(f1, f2, sum, total, true_window_size);
+
+    int bestWindow = usedPositions;
+    double bestAF = ld;
+    double currentAF;
+    //          if(f1<75000000)
+    //#pragma omp parallel for reduction(max:bestAF)
+    for (int bitmask=1; bitmask < (1 << (2*WINDOW_SIZE)); bitmask++) {
+      if((bitmask & usedPositions) == 0 || (bitmask & ~usedPositions) > 0) continue;
+      uint64_t currentWindowSum=0;
+      //#pragma omp parallel for reduction(+:currentWindowSum)
+      for (int pos=0; pos < 2*WINDOW_SIZE; pos++) {
+        if (((1<<pos) & bitmask & usedPositions) != 0)
+          currentWindowSum+=sumWindow[pos];
+      }
+      currentAF = ca_logdice(f1, f2, currentWindowSum, total, __builtin_popcount(bitmask));
+      if(currentAF > bestAF) {
+        bestAF = currentAF;
+        bestWindow = bitmask;
+      }
+    }
+
+    *result =  {w2, f2, sum,
+               pmi, pmi / (-log2(o/total/true_window_size)),
+               llr, lfmd, md,
+               0,
+               0,
+               0,
+               0,
+               ca_dice(f1, f2, sum, total, true_window_size),
+               ld,
+               bestAF,
+               usedPositions,
+               bestWindow
+    };
+
+  }
+
   std::vector<Collocator> rocksdb::CollocatorDB::get_collocators(uint32_t w1, uint32_t max_w2) {
     std::vector<Collocator> collocators;
     uint64_t w2, last_w2 = 0xffffffffffffffff;
-    uint64_t maxv = 0, sum = 0, left = 0, right = 0;
-    uint64_t sumWindow[2*WINDOW_SIZE+1] = {};
+    uint64_t maxv = 0, sum = 0;
+    uint64_t *sumWindow = (uint64_t*) malloc(sizeof(uint64_t)*2*WINDOW_SIZE);
+    memset(sumWindow, 0, sizeof(uint64_t)*2*WINDOW_SIZE);
     int true_window_size = 1;
     int usedPositions=0;
 
+#pragma omp parallel num_threads(40)
+#pragma omp single
     for ( auto it = std::unique_ptr<CollocatorIterator>(SeekIterator(w1, 0, 0)); it->isValid(); it->Next()) {
       uint64_t value = it->intValue(),
         key = it->intKey();
@@ -574,52 +629,15 @@ namespace rocksdb {
       if(last_w2 == 0xffffffffffffffff) last_w2 = w2;
       if (w2 != last_w2) {
         if (sum >= FREQUENCY_THRESHOLD) {
-          uint64_t f1 = _vocab[w1].freq, f2 = _vocab[last_w2].freq;
-          double o = sum,
-            r1 = (double)_vocab[w1].freq * true_window_size,
-            c1 = (double)_vocab[last_w2].freq,
-            e = r1 * c1 / total,
-            pmi = log2(o/e),
-            md = log2(o*o/e),
-            lfmd = log2(o*o*o/e),
-            llr = ca_ll(f1, f2, sum, total, true_window_size);
-          double left_lfmd = ca_lfmd(f1, f2, left, total, 1);
-          double right_lfmd = ca_lfmd(f1, f2, right, total, 1);
-          double left_npmi = ca_npmi(f1, f2, left, total, 1);
-          double right_npmi = ca_npmi(f1, f2, right, total, 1);
-          double ld =  ca_logdice(f1, f2, sum, total, true_window_size);
-
-          int bestWindow = usedPositions;
-          double bestAF = ld;
-          double currentAF;
-          if(f1<75000000)
-          for (int bitmask=1; bitmask < (1 << (2*WINDOW_SIZE)); bitmask++) {
-            if((bitmask & usedPositions) == 0 || (bitmask & ~usedPositions) > 0) continue;
-            uint64_t currentWindowSum=0;
-            for (int pos=0; pos < 2*WINDOW_SIZE; pos++) {
-              if (((1<<pos) & bitmask & usedPositions) != 0)
-                currentWindowSum+=sumWindow[pos];
-            }
-            currentAF = ca_logdice(f1, f2, currentWindowSum, total, __builtin_popcount(bitmask));
-            if(currentAF > bestAF) {
-              bestAF = currentAF;
-              bestWindow = bitmask;
-            }
+          collocators.push_back({});
+          rocksdb::Collocator *result = &(collocators[collocators.size()-1]);
+#pragma omp task firstprivate(last_w2, sumWindow, sum, usedPositions, true_window_size) shared(w1, result) if(sum > 1000000)
+          {
+            // uint64_t *nsw = (uint64_t *)malloc(sizeof(uint64_t) * 2 *WINDOW_SIZE);
+            // memcpy(nsw, sumWindow, sizeof(uint64_t) * 2 *WINDOW_SIZE);
+            applyCAMeasures(w1, last_w2, sumWindow, sum, usedPositions, true_window_size, result);
+            // free(nsw);
           }
-          collocators.push_back ( {last_w2, f2, sum,
-                pmi, pmi / (-log2(o/total/true_window_size)), /* normalize to [-1,1] */
-                llr, lfmd, md,
-                left_lfmd,
-                right_lfmd,
-                left_npmi,
-                right_npmi,
-                ca_dice(f1, f2, sum, total, true_window_size),
-                ld,
-                bestAF,
-                usedPositions,
-                bestWindow
-                }
-            );
         }
         memset(sumWindow, 0, 2*WINDOW_SIZE * sizeof(uint64_t));
         usedPositions = 1 << (-DIST(key)+WINDOW_SIZE-(DIST(key)<0?1:0));
@@ -636,36 +654,31 @@ namespace rocksdb {
         sumWindow[-DIST(key)+WINDOW_SIZE-(DIST(key)<0?1:0)] = value;
         true_window_size++;
       }
-      if(DIST(key) == -1)
-        left = value;
-      else if(DIST(key) == 1)
-        right = value;
     }
 
-		sort(collocators.begin(), collocators.end(), sortByLogDice);
-		
-    /*
+#pragma omp taskwait
+    sort(collocators.begin(), collocators.end(), sortByLogDice);
+
     int i=0;
     for (Collocator c : collocators) {
       if(i++>10) break;
-      std::cout << "w1:" << _vocab[w1].word << ", w2:" << _vocab[c.w2].word
+      std::cout << "w1:" << _vocab[w1].word << ", w2: *" << _vocab[c.w2].word << "*"
                 << "\t f(w1):" << _vocab[w1].freq
                 << "\t f(w2):" << _vocab[c.w2].freq
-                << "\t f(w1, x):" << total_w1
                 << "\t f(w1, w2):" << c.raw
                 << "\t pmi:" << c.pmi
                 << "\t npmi:" << c.npmi
                 << "\t llr:" << c.llr
+                << "\t md:" << c.md
                 << "\t lfmd:" << c.lfmd
-                << "\t fpmi:" << c.fpmi
                 << "\t total:" << total
                 << std::endl;
     }
-    */
-		return collocators;
+
+    return collocators;
   }
 
-	std::vector<Collocator> rocksdb::CollocatorDB::get_collocators(uint32_t w1) {
+  std::vector<Collocator> rocksdb::CollocatorDB::get_collocators(uint32_t w1) {
     return get_collocators(w1, UINT32_MAX);
   }
 
@@ -747,7 +760,7 @@ string rocksdb::CollocatorDB::collocators2json(vector<Collocator> collocators) {
       "}";
   }
   s << "]\n";
-  //  cout << s.str();
+  std::cout << s.str();
   return s.str();
 }
 
