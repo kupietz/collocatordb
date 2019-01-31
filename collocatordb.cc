@@ -187,10 +187,9 @@ namespace rocksdb {
   // Rychlý, Pavel (2008): <a href="http://www.fi.muni.cz/usr/sojka/download/raslan2008/13.pdf">A lexicographer-friendly association score.</a> In Proceedings of Recent Advances in Slavonic Natural Language Processing, RASLAN, 6–9.
   static inline double ca_logdice(uint64_t w1, uint64_t w2, uint64_t w12, uint64_t n, uint64_t window_size) {
     double
-      e = 0.5,
       r1 = (double) w1 * window_size,
       c1 = w2;
-    return 14 + log2(2 * (w12+e) / (c1+e+r1+e));
+    return 14 + log2(2 * w12 / (c1+r1));
   }
 
   class CountMergeOperator : public AssociativeMergeOperator {
