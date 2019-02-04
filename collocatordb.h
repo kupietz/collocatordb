@@ -28,7 +28,7 @@ namespace rocksdb {
     double right_npmi;
     double dice;
     double logdice;
-    double af;
+    double ldaf;
     int window;
     int af_window;
   };

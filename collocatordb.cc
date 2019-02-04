@@ -60,7 +60,7 @@ namespace rocksdb {
     double right_npmi;
     double dice;
     double logdice;
-    double af;
+    double ldaf;
     int window;
     int af_window;
   };
@@ -558,6 +558,7 @@ namespace rocksdb {
 	bool sortByLfmd(const Collocator &lhs, const Collocator &rhs) { return lhs.lfmd > rhs.lfmd; }
 	bool sortByLlr(const Collocator &lhs, const Collocator &rhs) { return lhs.llr > rhs.llr; }
 	bool sortByLogDice(const Collocator &lhs, const Collocator &rhs) { return lhs.logdice > rhs.logdice; }
+  bool sortByLogDiceAF(const Collocator &lhs, const Collocator &rhs) { return lhs.ldaf > rhs.ldaf; }
 
 
   void rocksdb::CollocatorDB::applyCAMeasures(const uint32_t w1, const uint32_t w2,  uint64_t *sumWindow,
@@ -756,7 +757,7 @@ string rocksdb::CollocatorDB::collocators2json(uint32_t w1, vector<Collocator> c
       "\"rlfmd\":" << c.right_lfmd  << "," <<
       "\"lnpmi\":" << c.left_npmi  << "," <<
       "\"rnpmi\":" << c.right_npmi  << "," <<
-      "\"af\":" << c.af << "," <<
+      "\"af\":" << c.ldaf << "," <<
       "\"win\":" << c.window << "," <<
       "\"afwin\":" << c.af_window  <<
       "}";
