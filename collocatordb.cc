@@ -394,7 +394,7 @@ namespace rocksdb {
     void applyCAMeasures(const uint32_t w1, const uint32_t w2,  uint64_t *sumWindow, const uint64_t sum, const int usedPositions, int true_window_size, rocksdb::Collocator *result);
 
     void dumpSparseLlr(uint32_t w1, uint32_t min_cooccur);
-    string collocators2json(vector<Collocator> collocators);
+    string collocators2json(uint32_t w1, vector<Collocator> collocators);
 
     // mapped to a rocksdb Merge operation
     virtual bool add(const std::string& key, uint64_t value) {
@@ -725,10 +725,13 @@ string rocksdb::CollocatorDB::getWord(uint32_t w1) {
   return _vocab[w1].word;
 }
 
-string rocksdb::CollocatorDB::collocators2json(vector<Collocator> collocators) {
+string rocksdb::CollocatorDB::collocators2json(uint32_t w1, vector<Collocator> collocators) {
   ostringstream s;
   int i = 0;
-  s << "[";
+  s << " { \"f1\": " << _vocab[w1].freq << "," <<
+    "\"w1\":\"" << string(_vocab[w1].word) << "\", " <<
+    "\"N\": " << total << ", " <<
+    "\"collocates\": [";
   bool first = true;
   for (Collocator c : collocators) {
     if(strncmp(_vocab[c.w2].word.c_str(), "quot", 4) == 0) continue;
@@ -758,7 +761,7 @@ string rocksdb::CollocatorDB::collocators2json(vector<Collocator> collocators) {
       "\"afwin\":" << c.af_window  <<
       "}";
   }
-  s << "]\n";
+  s << "]}\n";
   std::cout << s.str();
   return s.str();
 }
@@ -791,6 +794,6 @@ extern "C" {
 	}
 
 	const char *get_collocators_as_json(COLLOCATORS *db, uint32_t w1) {
-		return strdup(db->collocators2json(db->get_collocators(w1)).c_str());
+		return strdup(db->collocators2json(w1, db->get_collocators(w1)).c_str());
 	}
 }
