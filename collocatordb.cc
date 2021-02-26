@@ -670,6 +670,7 @@ namespace rocksdb {
 		// #pragma omp taskwait
     sort(collocators.begin(), collocators.end(), sortByLogDiceAF);
 
+		#ifdef DEBUG
     int i=0;
     for (Collocator c : collocators) {
       if(i++>10) break;
@@ -685,6 +686,7 @@ namespace rocksdb {
                 << "\t total:" << total
                 << std::endl;
     }
+		#endif
 
     return collocators;
   }
