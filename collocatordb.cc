@@ -120,7 +120,10 @@ namespace rocksdb {
       c1 = f2,
       e = r1 * c1 / total,
       o = f12;
-    return log2(o/e);
+    if(f12 < FREQUENCY_THRESHOLD)
+      return -1.0;
+    else
+			return log2(o/e);
   }
 
   // Bouma, Gerlof (2009): <a href="https://svn.spraakdata.gu.se/repos/gerlof/pub/www/Docs/npmi-pfd.pdf">
