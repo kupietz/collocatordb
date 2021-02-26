@@ -582,10 +582,11 @@ namespace rocksdb {
     double currentAF;
     //          if(f1<75000000)
     //#pragma omp parallel for reduction(max:bestAF)
+    // #pragma omp target teams distribute parallel for reduction(max:bestAF) map(tofrom:bestAF,currentAF,bestWindow,usedPositions)
     for (int bitmask=1; bitmask < (1 << (2*WINDOW_SIZE)); bitmask++) {
       if((bitmask & usedPositions) == 0 || (bitmask & ~usedPositions) > 0) continue;
       uint64_t currentWindowSum=0;
-      //#pragma omp parallel for reduction(+:currentWindowSum)
+      // #pragma omp target teams distribute parallel for reduction(+:currentWindowSum) map(tofrom:bitmask,usedPositions)
       for (int pos=0; pos < 2*WINDOW_SIZE; pos++) {
         if (((1<<pos) & bitmask & usedPositions) != 0)
           currentWindowSum+=sumWindow[pos];
@@ -622,8 +623,15 @@ namespace rocksdb {
     int true_window_size = 1;
     int usedPositions=0;
 
-#pragma omp parallel num_threads(40)
-#pragma omp single
+		if(w1 > _vocab.size()) {
+			std::cout << w1 << "> vocabulary size " << _vocab.size() << "\n";
+			w1 -= _vocab.size();
+		}
+	  #ifdef DEBUG
+		std::cout << "Searching for collocates of " << _vocab[w1].word << "\n";
+		#endif
+		// #pragma omp parallel num_threads(40)
+		// #pragma omp single
     for ( auto it = std::unique_ptr<CollocatorIterator>(SeekIterator(w1, 0, 0)); it->isValid(); it->Next()) {
       uint64_t value = it->intValue(),
         key = it->intKey();
@@ -634,7 +642,7 @@ namespace rocksdb {
         if (sum >= FREQUENCY_THRESHOLD) {
           collocators.push_back({});
           rocksdb::Collocator *result = &(collocators[collocators.size()-1]);
-#pragma omp task firstprivate(last_w2, sumWindow, sum, usedPositions, true_window_size) shared(w1, result) if(sum > 1000000)
+					// #pragma omp task firstprivate(last_w2, sumWindow, sum, usedPositions, true_window_size) shared(w1, result) if(sum > 1000000)
           {
             // uint64_t *nsw = (uint64_t *)malloc(sizeof(uint64_t) * 2 *WINDOW_SIZE);
             // memcpy(nsw, sumWindow, sizeof(uint64_t) * 2 *WINDOW_SIZE);
@@ -659,8 +667,8 @@ namespace rocksdb {
       }
     }
 
-#pragma omp taskwait
-    sort(collocators.begin(), collocators.end(), sortByLogDice);
+		// #pragma omp taskwait
+    sort(collocators.begin(), collocators.end(), sortByLogDiceAF);
 
     int i=0;
     for (Collocator c : collocators) {
