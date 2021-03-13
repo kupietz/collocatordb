@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "collocatordb.h"
+#include "../src/collocatordb.h"
 
 int main() {
 	COLLOCATORDB *cdb = open_collocatordb_for_write("/tmp/test.rocksdb");

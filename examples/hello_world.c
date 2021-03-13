@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "collocatordb.h"
+#include "../src/collocatordb.h"
 
 char dbpath[] = "../models/dereko-2021-i";
 const int testword = 431; // Grund

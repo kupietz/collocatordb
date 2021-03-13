@@ -9,7 +9,7 @@ PLATFORM_CXXFLAGS=-std=c++11  -DROCKSDB_PLATFORM_POSIX -DROCKSDB_LIB_IO_POSIX  -
 PLATFORM=OS_LINUX
 PLATFORM_LDFLAGS= -L$(INSTALL_PATH)/lib -Wl,-rpath=$(INSTALL_PATH)/lib -lpthread -lrt -lsnappy -lz -lbz2 -llz4 -lzstd
 
-CXXFLAGS = -Wall -Wno-reorder -I/usr/local/include -g -std=c++11  -Ofast
+CXXFLAGS = -Wall -Wno-reorder -I/usr/local/include -g -std=c++11
 CFLAGS = -Wall -I/usr/local/rocksdb -I$(INSTALL_PATH)/include -g -std=gnu99  -O2
 
 ARFLAGS = ${EXTRA_ARFLAGS} rs
@@ -17,64 +17,75 @@ ARFLAGS = ${EXTRA_ARFLAGS} rs
 ifneq ($(USE_RTTI), 1)
 	CXXFLAGS += -fno-rtti
 endif
-LIB_SOURCES = collocatordb.cc
+SOURCE_DIR := src
+BUILD_DIR := build
+BIN_DIR := bin
+LIB_DIR := lib
+LIB_SOURCES = src/collocatordb.cc
 
-LIBOBJECTS = $(LIB_SOURCES:.cc=.o)
+LIB_OBJECTS := $(subst $(SOURCE_DIR),$(BUILD_DIR),$(LIB_SOURCES:.cc=.o))
 
 .PHONY: static_lib shared_lib install-static install-shared
 
-all: static_lib shared_lib dumpllr c_testcdb
+all: static_lib shared_lib
 
 install: install-static install-shared
 
-hello_world: hello_world.c collocatordb.h collocatordb.o Makefile
-	$(CC) $(CFLAGS) -L. -L$(INSTALL_PATH)/lib $@.c -o$@ collocatordb.o --std=gnu99 -lstdc++ -lm $(PLATFORM_LDFLAGS) $(PLATFORM_CCFLAGS) $(EXEC_LDFLAGS) -lrocksdb
+bin/hello_world: examples/hello_world.c src/collocatordb.h build/collocatordb.o Makefile
+	mkdir -p bin
+	$(CC) $(CFLAGS) -L. -L$(INSTALL_PATH)/lib examples/hello_world.c -o$@ build/collocatordb.o --std=gnu99 -lstdc++ -lm $(PLATFORM_LDFLAGS) $(PLATFORM_CCFLAGS) $(EXEC_LDFLAGS) -lrocksdb
 
-testcdb: testcdb.cc collocatordb.h collocatordb.o Makefile
-	$(CXX) $(CXXFLAGS) -L. -L$(INSTALL_PATH)/lib $@.cc -o$@ collocatordb.o -lrocksdb $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
+bin/testcdb: src/testcdb.cc src/collocatordb.h build/collocatordb.o Makefile
+	$(CXX) $(CXXFLAGS) -L. -L$(INSTALL_PATH)/lib $@.cc -o$@ build/collocatordb.o -lrocksdb $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
 
-dumpllr: dumpllr.cc collocatordb.h collocatordb.o Makefile
-	$(CXX) $(CXXFLAGS) -L. -L$(INSTALL_PATH)/lib $@.cc -fopenmp -o$@ collocatordb.o $(INSTALL_PATH)/lib/librocksdb.a $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
+bin/dumpllr: examples/dumpllr.cc src/collocatordb.h build/collocatordb.o Makefile
+	$(CXX) $(CXXFLAGS) -L. -L$(INSTALL_PATH)/lib $@.cc -fopenmp -o$@ build/collocatordb.o $(INSTALL_PATH)/lib/librocksdb.a $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
 
-dumppmicubed: dumppmicubed.cc collocatordb.h collocatordb.o Makefile
-	$(CXX) $(CXXFLAGS) -L. -L$(INSTALL_PATH)/lib $@.cc -fopenmp -o$@ collocatordb.o -lrocksdb $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
+bin/dumppmicubed: examples/dumppmicubed.cc src/collocatordb.h build/collocatordb.o Makefile
+	$(CXX) $(CXXFLAGS) -L. -L$(INSTALL_PATH)/lib $@.cc -fopenmp -o$@ build/collocatordb.o -lrocksdb $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
 
-dumpldafdiff: dumpldafdiff.cc collocatordb.h collocatordb.o Makefile
-	$(CXX) $(CXXFLAGS) -D_GLIBCXX_PARALLEL -L. -L$(INSTALL_PATH)/lib $@.cc -fopenmp -o$@ collocatordb.o /vol/work/kupietz/rocksdb/librocksdb.a $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
+bin/dumpldafdiff: dumpldafdiff.cc src/collocatordb.h build/collocatordb.o Makefile
+	$(CXX) $(CXXFLAGS) -D_GLIBCXX_PARALLEL -L. -L$(INSTALL_PATH)/lib $@.cc -fopenmp -o$@ build/collocatordb.o /vol/work/kupietz/rocksdb/librocksdb.a $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
 
-c_testcdb: c_testcdb.c collocatordb.h collocatordb.o Makefile
-	$(CC) $(CFLAGS) -L. -L$(INSTALL_PATH)/lib $@.c -o$@ collocatordb.o -std=gnu99 -lstdc++ -lm -lrocksdb $(PLATFORM_LDFLAGS) $(PLATFORM_CCFLAGS) $(EXEC_LDFLAGS)
+bin/c_testcdb: examples/c_testcdb.c src/collocatordb.h build/collocatordb.o Makefile
+	$(CC) $(CFLAGS) -L. -L$(INSTALL_PATH)/lib $@.c -o$@ build/collocatordb.o -std=gnu99 -lstdc++ -lm -lrocksdb $(PLATFORM_LDFLAGS) $(PLATFORM_CCFLAGS) $(EXEC_LDFLAGS)
 
-collocatordb: collocatordb.cc Makefile
+bin/collocatordb: src/collocatordb.cc Makefile
 	$(CXX) $(CXXFLAGS) -L$(INSTALL_PATH)/lib $@.cc -o$@ -lrocksdb $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
 
-static_lib: libcollocatordb.a
+static_lib: lib/libcollocatordb.a
 
-shared_lib: libcollocatordb.so.$(COLLOCATDB_MAJOR).$(COLLOCATDB_MINOR)
+shared_lib: lib/libcollocatordb.so.$(COLLOCATDB_MAJOR).$(COLLOCATDB_MINOR)
 
-libcollocatordb.a: $(LIBOBJECTS)
+lib/libcollocatordb.a: $(LIB_OBJECTS)
+	mkdir -p lib
 	$(AM_V_AR)rm -f $@
-	$(AM_V_at)$(AR) $(ARFLAGS) $@ $(LIBOBJECTS)
+	$(AM_V_at)$(AR) $(ARFLAGS) $@ $(LIB_OBJECTS)
 
-libcollocatordb.so.$(COLLOCATDB_MAJOR).$(COLLOCATDB_MINOR): collocatordb.cc
-	$(CXX) $(CXXFLAGS) -Wall -D_GLIBCXX_PARALLEL -fopenmp -c collocatordb.cc -Wl,-soname=libcollocatordb.so.1 -Wl,--version-script=collocatordb.exmap -shared -fPIC -o libcollocatordb.so.$(COLLOCATDB_MAJOR).$(COLLOCATDB_MINOR)
+lib/libcollocatordb.so.$(COLLOCATDB_MAJOR).$(COLLOCATDB_MINOR): $(LIB_SOURCES)
+	$(CXX) $(CXXFLAGS) -Wall -D_GLIBCXX_PARALLEL -fopenmp -c $< -Wl,-soname=libcollocatordb.so.1 -Wl,--version-script=collocatordb.exmap -shared -fPIC -o $@
+
+build/collocatordb.o : src/collocatordb.cc
+	mkdir -p build
+	$(CXX) $(CXXFLAGS) -c $< -o$@ $(PLATFORM_CXXFLAGS)
 
 .cc.o:
 	$(CXX) $(CXXFLAGS) -c $< -o$@ $(PLATFORM_CXXFLAGS)
 
-install-static: libcollocatordb.a collocatordb.h
+install-static: lib/libcollocatordb.a src/collocatordb.h
 	install -d $(INSTALL_PATH)/include && \
 	install -d $(INSTALL_PATH)/lib && \
-	install -t $(INSTALL_PATH)/include -D -C -m 644  collocatordb.h $ && \
-	install -t $(INSTALL_PATH)/lib -C -D -m 755 libcollocatordb.a
+	install -t $(INSTALL_PATH)/include -D -C -m 644  src/collocatordb.h $ && \
+	install -t $(INSTALL_PATH)/lib -C -D -m 755 lib/libcollocatordb.a
 
-install-shared: libcollocatordb.so.$(COLLOCATDB_MAJOR).$(COLLOCATDB_MINOR) collocatordb.h
+install-shared: lib/libcollocatordb.so.$(COLLOCATDB_MAJOR).$(COLLOCATDB_MINOR) src/collocatordb.h
 	install -d $(INSTALL_PATH)/include && \
 	install -d $(INSTALL_PATH)/lib && \
-	install -Dt $(INSTALL_PATH)/include -C -m 644 collocatordb.h && \
-	install -Dt $(INSTALL_PATH)/lib -C -m 755 libcollocatordb.so.$(COLLOCATDB_MAJOR).$(COLLOCATDB_MINOR) && \
+	install -Dt $(INSTALL_PATH)/include -C -m 644 src/collocatordb.h && \
+	install -Dt $(INSTALL_PATH)/lib -C -m 755 lib/libcollocatordb.so.$(COLLOCATDB_MAJOR).$(COLLOCATDB_MINOR) && \
 		ln -fs $(INSTALL_PATH)/lib/libcollocatordb.so.$(COLLOCATDB_MAJOR).$(COLLOCATDB_MINOR) $(INSTALL_PATH)/lib/libcollocatordb.so.$(COLLOCATDB_MAJOR) && \
 		ln -fs $(INSTALL_PATH)/lib/libcollocatordb.so.$(COLLOCATDB_MAJOR) $(INSTALL_PATH)/lib/libcollocatordb.so
 
 clean:
+	rm -rf $(LIB_DIR) $(BUILD_DIR) $(BIN_DIR)
 	rm -f *.so* *.a *.o c_testcdb collocatordb dumpldafdiff dumppmicubed dumpllr testcdb hello_world

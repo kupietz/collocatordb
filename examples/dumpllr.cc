@@ -3,7 +3,7 @@
 #include <memory>
 #include <iostream>
 #include <stdint.h>
-#include "collocatordb.h"
+#include "../src/collocatordb.h"
 #include <thread>
 #include <chrono>
 #include <sstream> // for ostringstream
