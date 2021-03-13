@@ -4,8 +4,8 @@
 #include <math.h>
 #include "collocatordb.h"
 
-char dbpath[] = "/vol/work/kupietz/Work2/kl/trunk/Analysemethoden/word2vec/models/dereko-2017-ii";
-const int testword = 259; // Welt
+char dbpath[] = "../models/dereko-2021-i";
+const int testword = 431; // Grund
 
 int main(int argc, char* argv[]) {
   COLLOCATORDB *cdb;
@@ -17,6 +17,7 @@ int main(int argc, char* argv[]) {
   }
   fprintf(stderr, "Successfully opened %s.\n", dbpath);
 
+  printf("associations between two words:\n %s", get_collocation_scores_as_json(cdb, 431, 218717));
   /*
   printf("raw dump of all “%s”-neighbour positions and frequencies:\n", get_word(cdb, testword));
 	dump_collocators(cdb, testword, 0, 0);

@@ -67,10 +67,12 @@ typedef rocksdb::CollocatorDB COLLOCATORDB;
 typedef struct COLLOCATORDB COLLOCATORDB;
 #endif
 
-extern COLLOCATORDB *open_collocatordb(char *s);
-extern COLLOCATORDB *open_collocatordb_for_write(char *s);
+extern COLLOCATORDB *open_collocatordb(const char *s);
+extern COLLOCATORDB *open_collocatordb_for_write(const char *s);
 extern void inc_collocator(COLLOCATORDB *db, uint64_t w1, uint64_t w2, int8_t dist);
 extern void dump_collocators(COLLOCATORDB *db, uint32_t w1, uint32_t w2, int8_t dist);
 extern void get_collocators(COLLOCATORDB *db, uint32_t w1);
+extern void get_collocation_scores(COLLOCATORDB *db, uint32_t w1, uint32_t w2);
 extern char *get_collocators_as_json(COLLOCATORDB *db, uint32_t w1);
+extern char *get_collocation_scores_as_json(COLLOCATORDB *db, uint32_t w1, uint32_t w2);
 extern char *get_word(COLLOCATORDB *db, uint32_t w1);
