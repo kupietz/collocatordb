@@ -49,8 +49,8 @@ namespace rocksdb {
     double llr;
     double lfmd;
     double md;
-    double left_raw;
-    double right_raw;
+    uint64_t left_raw;
+    uint64_t right_raw;
     double left_pmi;
     double right_pmi;
     double dice;
@@ -599,13 +599,18 @@ namespace rocksdb {
       }
     }
 
-    *result =  {w2, f2, sum,
-               pmi, pmi / (-log2(o/total/true_window_size)),
-               llr, lfmd, md,
+    *result = {w2,
+               f2,
+	       sum,
+               pmi,
+	       pmi / (-log2(o/total/true_window_size)),
+               llr,
+	       lfmd,
+	       md,
+               sumWindow[WINDOW_SIZE],
+               sumWindow[WINDOW_SIZE-1],
                ca_pmi(f1, f2, sumWindow[WINDOW_SIZE], total, 1),
                ca_pmi(f1, f2, sumWindow[WINDOW_SIZE-1], total, 1),
-                (double)sumWindow[WINDOW_SIZE],
-                (double)sumWindow[WINDOW_SIZE-1],
                ca_dice(f1, f2, sum, total, true_window_size),
                ld,
                bestAF,
@@ -784,7 +789,7 @@ string rocksdb::CollocatorDB::collocators2json(uint32_t w1, vector<Collocator> c
       "}";
   }
   s << "]}\n";
-  std::cout << s.str();
+  //  std::cout << s.str();
   return s.str();
 }
 

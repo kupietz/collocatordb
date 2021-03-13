@@ -32,6 +32,27 @@ namespace rocksdb {
     int window;
     int af_window;
   };
+namespace rocksdb {
+    class Collocator {
+    public:
+    uint32_t w2;
+    uint64_t f2;
+    uint64_t raw;
+    double pmi;
+    double npmi;
+    double llr;
+    double lfmd;
+    double md;
+    uint64_t left_raw;
+    uint64_t right_raw;
+    double left_pmi;
+    double right_pmi;
+    double dice;
+    double logdice;
+    double ldaf;
+    int window;
+    int af_window;
+  };
 
     class CollocatorIterator : public Iterator  {
     public:
