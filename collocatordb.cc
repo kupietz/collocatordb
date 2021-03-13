@@ -1,8 +1,6 @@
-#include <typeinfo>
 #define EXPORT __attribute__((visibility("visible")))
 #define IMPORT
 #include <assert.h>
-#include <inttypes.h>
 #include <memory>
 #include <iostream>
 #include <algorithm>
@@ -12,14 +10,11 @@
 #include <sstream> // for ostringstream
 #include <math.h>
 #include <rocksdb/cache.h>
-#include "rocksdb/comparator.h"
 #include "rocksdb/db.h"
 #include "rocksdb/env.h"
 #include "rocksdb/table.h"
 #include <rocksdb/merge_operator.h>
 #include <rocksdb/slice_transform.h>
-#include "rocksdb/utilities/db_ttl.h"
-#include "rocksdb/filter_policy.h"
 #include "merge_operators.h"
 
 #define WINDOW_SIZE 5
