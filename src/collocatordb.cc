@@ -820,11 +820,11 @@ string rocksdb::CollocatorDB::collocators2json(uint32_t w1, vector<Collocator> c
       "\"md\":" << c.md << "," <<
       "\"dice\":" << c.dice << "," <<
       "\"ld\":" << c.logdice << "," <<
-      "\"lncount\":" << c.left_raw << "," <<
-      "\"rncount\":" << c.right_raw << "," <<
-      "\"lnpmi\":" << c.left_pmi << "," <<
-      "\"rnpmi\":" << c.right_pmi << "," <<
-      "\"af\":" << c.ldaf << "," <<
+      "\"ln_count\":" << c.left_raw << "," <<
+      "\"rn_count\":" << c.right_raw << "," <<
+      "\"ln_pmi\":" << c.left_pmi << "," <<
+      "\"rn_pmi\":" << c.right_pmi << "," <<
+      "\"ldaf\":" << c.ldaf << "," <<
       "\"win\":" << c.window << "," <<
       "\"afwin\":" << c.af_window <<
       "}";
