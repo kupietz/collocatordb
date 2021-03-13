@@ -49,10 +49,10 @@ namespace rocksdb {
     double llr;
     double lfmd;
     double md;
-    double left_lfmd;
-    double right_lfmd;
-    double left_npmi;
-    double right_npmi;
+    double left_raw;
+    double right_raw;
+    double left_pmi;
+    double right_pmi;
     double dice;
     double logdice;
     double ldaf;
@@ -761,10 +761,10 @@ string rocksdb::CollocatorDB::collocators2json(uint32_t w1, vector<Collocator> c
       "\"md\":" << c.md  << "," <<
       "\"dice\":" << c.dice  << "," <<
       "\"ld\":" << c.logdice  << "," <<
-      "\"llfmd\":" << c.left_lfmd  << "," <<
-      "\"rlfmd\":" << c.right_lfmd  << "," <<
-      "\"lnpmi\":" << c.left_npmi  << "," <<
-      "\"rnpmi\":" << c.right_npmi  << "," <<
+      "\"lncount\":" << c.left_raw  << "," <<
+      "\"rncount\":" << c.right_raw  << "," <<
+      "\"lnpmi\":" << c.left_pmi  << "," <<
+      "\"rnpmi\":" << c.right_pmi  << "," <<
       "\"af\":" << c.ldaf << "," <<
       "\"win\":" << c.window << "," <<
       "\"afwin\":" << c.af_window  <<
