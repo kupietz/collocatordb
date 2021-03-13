@@ -243,6 +243,7 @@ namespace rocksdb {
     virtual void SeekToFirst() { base_iterator_->SeekToFirst(); }
     virtual void SeekToLast() { base_iterator_->SeekToLast(); }
     virtual void Seek(const rocksdb::Slice& s) { base_iterator_->Seek(s); }
+    virtual void SeekForPrev(const rocksdb::Slice& s) { base_iterator_->SeekForPrev(s); }
     virtual void Prev() { base_iterator_->Prev(); }
     virtual void Next() { base_iterator_->Next(); }
     virtual Slice key() const;
