@@ -1,0 +1,1 @@
+-train models/wpd19_10000.w2vinput -save-vocab models/wpd19_10000.vocab -output models/wpd19_10000.rocksdb -type 5 -binary 1 -iter 1 -sample 0 -min-count 0 

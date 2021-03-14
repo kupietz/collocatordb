@@ -86,33 +86,34 @@ typedef rocksdb::CollocatorDB COLLOCATORDB;
 
 #else
 typedef struct COLLOCATORDB COLLOCATORDB;
-typedef struct {
-    uint32_t w2;
-    uint64_t f2;
-    uint64_t raw;
-    double pmi;
-    double npmi;
-    double llr;
-    double lfmd;
-    double md;
-    uint64_t left_raw;
-    uint64_t right_raw;
-    double left_pmi;
-    double right_pmi;
-    double dice;
-    double logdice;
-    double ldaf;
-    int window;
-    int af_window;
-} Collocator ;
 #endif
+
+typedef struct {
+  uint32_t w2;
+  uint64_t f2;
+  uint64_t raw;
+  double pmi;
+  double npmi;
+  double llr;
+  double lfmd;
+  double md;
+  uint64_t left_raw;
+  uint64_t right_raw;
+  double left_pmi;
+  double right_pmi;
+  double dice;
+  double logdice;
+  double ldaf;
+  int window;
+  int af_window;
+} COLLOCATOR ;
 
 extern COLLOCATORDB *open_collocatordb(const char *s);
 extern COLLOCATORDB *open_collocatordb_for_write(const char *s);
 extern void inc_collocator(COLLOCATORDB *db, uint64_t w1, uint64_t w2, int8_t dist);
 extern void dump_collocators(COLLOCATORDB *db, uint32_t w1, uint32_t w2, int8_t dist);
-extern Collocator *get_collocators(COLLOCATORDB *db, uint32_t w1);
-extern Collocator *get_collocation_scores(COLLOCATORDB *db, uint32_t w1, uint32_t w2);
+extern COLLOCATOR *get_collocators(COLLOCATORDB *db, uint32_t w1);
+extern COLLOCATOR *get_collocation_scores(COLLOCATORDB *db, uint32_t w1, uint32_t w2);
 extern char *get_collocators_as_json(COLLOCATORDB *db, uint32_t w1);
 extern char *get_collocation_scores_as_json(COLLOCATORDB *db, uint32_t w1, uint32_t w2);
 extern char *get_word(COLLOCATORDB *db, uint32_t w1);

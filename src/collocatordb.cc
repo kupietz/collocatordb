@@ -858,15 +858,27 @@ extern "C" {
     db->dump(w1, w2, dist);
   }
 
-  Collocator *get_collocators(COLLOCATORS *db, uint32_t w1) {
-    return &db->get_collocators(w1)[0];
+  COLLOCATORS *get_collocators(COLLOCATORS *db, uint32_t w1) {
+    std::vector<Collocator> c = db->get_collocators(w1);
+    if (c.empty())
+      return NULL;
+    uint64_t size = c.size() + sizeof c[0];
+    COLLOCATORS *p = (COLLOCATORS *) malloc(size);
+    memcpy(p, c.data(), size);
+    return p;
   }
 
-  Collocator *get_collocation_scores(COLLOCATORS *db, uint32_t w1, uint32_t w2) {
-    return &db->get_collocation_scores(w1, w2)[0];
+  COLLOCATORS *get_collocation_scores(COLLOCATORS *db, uint32_t w1, uint32_t w2) {
+    std::vector<Collocator> c = db->get_collocation_scores(w1, w2);
+    if (c.empty())
+      return NULL;
+    uint64_t size = c.size() + sizeof c[0];
+    COLLOCATORS *p = (COLLOCATORS *) malloc(size);
+    memcpy(p, c.data(), size);
+    return p;
   }
 
-  const char *get_word(COLLOCATORS *db, uint32_t w) {
+  char *get_word(COLLOCATORS *db, uint32_t w) {
     return strdup(db->getWord(w).c_str());
   }
 

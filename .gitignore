@@ -3,3 +3,6 @@ build/
 lib/
 bin/
 .*~
+.*\.log
+.*LOG
+LOG.*

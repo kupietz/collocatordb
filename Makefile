@@ -25,11 +25,13 @@ LIB_SOURCES = src/collocatordb.cc
 
 LIB_OBJECTS := $(subst $(SOURCE_DIR),$(BUILD_DIR),$(LIB_SOURCES:.cc=.o))
 
-.PHONY: static_lib shared_lib install-static install-shared
+.PHONY: static_lib shared_lib install-static install-shared test
 
-all: static_lib shared_lib
+all: static_lib shared_lib test
 
 install: install-static install-shared
+
+test: bin/basic_test
 
 bin/hello_world: examples/hello_world.c src/collocatordb.h build/collocatordb.o Makefile
 	mkdir -p bin
@@ -46,9 +48,6 @@ bin/dumppmicubed: examples/dumppmicubed.cc src/collocatordb.h build/collocatordb
 
 bin/dumpldafdiff: dumpldafdiff.cc src/collocatordb.h build/collocatordb.o Makefile
 	$(CXX) $(CXXFLAGS) -D_GLIBCXX_PARALLEL -L. -L$(INSTALL_PATH)/lib $@.cc -fopenmp -o$@ build/collocatordb.o /vol/work/kupietz/rocksdb/librocksdb.a $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
-
-bin/c_testcdb: examples/c_testcdb.c src/collocatordb.h build/collocatordb.o Makefile
-	$(CC) $(CFLAGS) -L. -L$(INSTALL_PATH)/lib $@.c -o$@ build/collocatordb.o -std=gnu99 -lstdc++ -lm -lrocksdb $(PLATFORM_LDFLAGS) $(PLATFORM_CCFLAGS) $(EXEC_LDFLAGS)
 
 bin/collocatordb: src/collocatordb.cc Makefile
 	$(CXX) $(CXXFLAGS) -L$(INSTALL_PATH)/lib $@.cc -o$@ -lrocksdb $(PLATFORM_LDFLAGS) $(PLATFORM_CXXFLAGS) $(EXEC_LDFLAGS)
@@ -85,6 +84,11 @@ install-shared: lib/libcollocatordb.so.$(COLLOCATDB_MAJOR).$(COLLOCATDB_MINOR) s
 	install -Dt $(INSTALL_PATH)/lib -C -m 755 lib/libcollocatordb.so.$(COLLOCATDB_MAJOR).$(COLLOCATDB_MINOR) && \
 		ln -fs $(INSTALL_PATH)/lib/libcollocatordb.so.$(COLLOCATDB_MAJOR).$(COLLOCATDB_MINOR) $(INSTALL_PATH)/lib/libcollocatordb.so.$(COLLOCATDB_MAJOR) && \
 		ln -fs $(INSTALL_PATH)/lib/libcollocatordb.so.$(COLLOCATDB_MAJOR) $(INSTALL_PATH)/lib/libcollocatordb.so
+
+bin/basic_test: tests/basic_test.c build/collocatordb.o
+	mkdir -p bin
+	$(CC) $(CFLAGS) -L. -L$(INSTALL_PATH)/lib $< -o$@ build/collocatordb.o --std=gnu99 -lstdc++ -lm $(PLATFORM_LDFLAGS) $(PLATFORM_CCFLAGS) $(EXEC_LDFLAGS) -lrocksdb
+	$@
 
 clean:
 	rm -rf $(LIB_DIR) $(BUILD_DIR) $(BIN_DIR)
