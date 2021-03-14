@@ -49,8 +49,6 @@ void test_collocation_analysis_as_json() {
   char *needle = "\"word\":\"um\",\"f2\":264,\"f\":5,\"npmi\":-0.0556343,\"pmi\":-0.958064,\"llr\":2.87717,\"lfmd\":3.68579,\"md\":1.36386,\"dice\":0.00169952,\"ld\":4.79935,\"ln_count\":0,\"rn_count\":1,\"ln_pmi\":-1,\"rn_pmi\":-1,\"ldaf\":4.79935,\"win\":668,\"afwin\":668";
   TEST_CHECK(strstr(json, needle) > 0);
   TEST_MSG("Expected to contain: %s", needle);
-  const COLLOCATOR *c = get_collocators(cdb, 62);
-  printf("%s %lu\n", get_word(cdb,c[0].w2), c[0].f2);
 }
 
 void test_collocation_analysis() {
@@ -64,8 +62,6 @@ void test_collocation_analysis() {
   TEST_CHECK(strcmp(produced, expected) == 0);
   TEST_MSG("Expected: %s", expected);
   TEST_MSG("Produced: %s", produced);
-  printf("%s\n", get_collocators_as_json(cdb,62));
-
 }
 
 int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
@@ -111,6 +107,7 @@ void test_writing() {
   inc_collocator(cdb, 1, 2, 4); size++;
   COLLOCATOR *c = get_collocators(cdb, 0);
   TEST_ASSERT(c != NULL);
+  TEST_CHECK(c[0].w2 == 1);
   TEST_CHECK(c[0].raw == 2001);
   TEST_CHECK(c[0].left_raw == 200);
   TEST_CHECK(c[0].right_raw == 200);
