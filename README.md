@@ -4,7 +4,7 @@
 ### Install RocksdDB and prerequisites
 * install prerequisites on CentOS, FeDora, RHEL
     ```
-    sudo yum install cmake snappy snappy-devel zlib zlib-devel bzip2 bzip2-devel lz4-devel libzstd-devel libomp-devel
+    sudo yum install cmake3 snappy snappy-devel zlib zlib-devel bzip2 bzip2-devel lz4-devel libzstd-devel libomp-devel
     
     git clone https://github.com/gflags/gflags.git
     cd gflags
@@ -16,7 +16,7 @@
     ```
     sudo apt-get install cmake libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libomp-dev
     ```
-* install RocksDBn [v5.11.3](https://github.com/facebook/rocksdb/releases/tag/v5.11.3)
+* install [RocksDB v5.11.3](https://github.com/facebook/rocksdb/releases/tag/v5.11.3)
     ```
     git clone https://github.com/facebook/rocksdb.git
     cd rocksdb
@@ -30,8 +30,8 @@ git clone ssh://korap.ids-mannheim.de:29418/private/collocatordb && scp -p -P 29
 cd collocatordb
 mkdir -p build
 cd build
-cmake ..
-make && make test && sudo make install
+cmake3 ..
+make && ctest3 --extra-verbose && sudo make install
 ```
 ## Provided API
 ```

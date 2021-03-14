@@ -78,8 +78,7 @@ int rmrf(char *path) {
 void test_writing() {
   char *tmp = tempnam(NULL, NULL);
   long size = 0;
-
-  printf("%s\n", acutest_argv0_);
+  int i;
 
   char *rocksdbfn = malloc(strlen(tmp)+strlen(".rocksdb"));
   strcpy (rocksdbfn, tmp);
@@ -96,7 +95,7 @@ void test_writing() {
   fclose(h);
   read_vocab(cdb, vocabfn);
   inc_collocator(cdb, 0, 1, 4); size++;
-  for (int i=0; i < 1000; i++) {
+  for (i=0; i < 1000; i++) {
     inc_collocator(cdb, 0, 1, i % 5); size++;
     inc_collocator(cdb, 0, 1, -i % 5); size++;
     inc_collocator(cdb, 1, 0, i % 5); size++;
