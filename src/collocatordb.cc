@@ -320,9 +320,9 @@ namespace rocksdb {
 
                                             std::shared_ptr<DB> OpenDbForRead(const char *dbname);
 
-                                            void read_vocab(string fname);
 
   public:
+                                            void readVocab(string fname);
                                             string getWord(uint32_t w1);
 
                                             CollocatorDB(const char *db_name, bool read_only);
@@ -461,7 +461,7 @@ namespace rocksdb {
     inc(encodeCollocation(w1, w2, dist));
   }
 
-  void rocksdb::CollocatorDB::read_vocab(string fname) {
+  void rocksdb::CollocatorDB::readVocab(string fname) {
     char strbuf[2048];
     uint64_t freq;
     FILE *fin = fopen(fname.c_str(), "rb");
@@ -496,7 +496,7 @@ namespace rocksdb {
                 total, sentences, sl, avg_window_size);
         fclose(fp);
       } else {
-        std::cout << "size file " << size_fname << " not found\n";
+       // std::cout << "size file " << size_fname << " not found\n";
       }
     } else {
       std::cout << "cannot determine size file " << size_fname << "\n";
@@ -522,7 +522,7 @@ namespace rocksdb {
       assert(false);
     }
     vocabname << name << ".vocab";
-    read_vocab(vocabname.str());
+    readVocab(vocabname.str());
     return std::shared_ptr<DB>(db);
   }
 
@@ -562,6 +562,7 @@ namespace rocksdb {
       std::cerr << s.ToString() << std::endl;
       assert(false);
     }
+    total = 1000;
     return std::shared_ptr<DB>(db);
   }
 
@@ -857,16 +858,21 @@ extern "C" {
     db->dump(w1, w2, dist);
   }
 
-  void get_collocators(COLLOCATORS *db, uint32_t w1) {
-    db->get_collocators(w1);
+  Collocator *get_collocators(COLLOCATORS *db, uint32_t w1) {
+    return &db->get_collocators(w1)[0];
   }
 
-  void get_collocation_scores(COLLOCATORS *db, uint32_t w1, uint32_t w2) {
-    db->get_collocation_scores(w1, w2);
+  Collocator *get_collocation_scores(COLLOCATORS *db, uint32_t w1, uint32_t w2) {
+    return &db->get_collocation_scores(w1, w2)[0];
   }
 
   const char *get_word(COLLOCATORS *db, uint32_t w) {
     return strdup(db->getWord(w).c_str());
+  }
+
+  void read_vocab(COLLOCATORS *db, char *fname) {
+    std::string fName(fname);
+    db->readVocab(fName);
   }
 
   const char *get_collocators_as_json(COLLOCATORS *db, uint32_t w1) {
@@ -876,6 +882,7 @@ extern "C" {
   const char *get_collocation_scores_as_json(COLLOCATORS *db, uint32_t w1, uint32_t w2) {
     return strdup(db->collocators2json(w1, db->get_collocation_scores(w1, w2)).c_str());
   }
+
 #ifdef __clang__
 #pragma clang diagnostic push
 #endif

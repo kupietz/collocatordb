@@ -30,13 +30,36 @@ make && make install
 ```
 ## Provided API
 ```
-COLLOCATORDB *open_collocatordb(const char *path_to_rocksdb_without_extension);
-COLLOCATORDB *open_collocatordb_for_write(const char *path_to_rocksdb_without_extension);
+typedef struct {
+    uint32_t w2;
+    uint64_t f2;
+    uint64_t raw;
+    double pmi;
+    double npmi;
+    double llr;
+    double lfmd;
+    double md;
+    uint64_t left_raw;
+    uint64_t right_raw;
+    double left_pmi;
+    double right_pmi;
+    double dice;
+    double logdice;
+    double ldaf;
+    int window;
+    int af_window;
+} Collocator ;
+
+COLLOCATORDB *open_collocatordb(const char *s);
+COLLOCATORDB *open_collocatordb_for_write(const char *s);
 void inc_collocator(COLLOCATORDB *db, uint64_t w1, uint64_t w2, int8_t dist);
 void dump_collocators(COLLOCATORDB *db, uint32_t w1, uint32_t w2, int8_t dist);
+Collocator *get_collocators(COLLOCATORDB *db, uint32_t w1);
+Collocator *get_collocation_scores(COLLOCATORDB *db, uint32_t w1, uint32_t w2);
 char *get_collocators_as_json(COLLOCATORDB *db, uint32_t w1);
 char *get_collocation_scores_as_json(COLLOCATORDB *db, uint32_t w1, uint32_t w2);
 char *get_word(COLLOCATORDB *db, uint32_t w1);
+void read_vocab(COLLOCATORDB *db, char *fname);
 ```
 
 ## TODO
