@@ -1,8 +1,8 @@
 # CollocatorDB: Storing and retrieving collocation counts based on [RocksDB](https://github.com/facebook/rocksdb)
 
 ## Installation
-### Install RocksdDB and prerequisites
-* install prerequisites on CentOS, FeDora, RHEL
+### Install RocksDB and prerequisites
+* prerequisites on CentOS, FeDora, RHEL
     ```
     sudo yum install cmake3 snappy snappy-devel zlib zlib-devel bzip2 bzip2-devel lz4-devel libzstd-devel libomp-devel
     
@@ -12,7 +12,7 @@
     ./configure && make && sudo make install
     cd ..
     ```
-* install prerequisites on Ubuntu, Debian
+* prerequisites on Ubuntu, Debian
     ```
     sudo apt-get install cmake libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libomp-dev
     ```
@@ -26,41 +26,41 @@
     ```
 ### Install CollocatorDB
 ```
-git clone ssh://korap.ids-mannheim.de:29418/private/collocatordb && scp -p -P 29418 korap.ids-mannheim.de:hooks/commit-msg "collocatordb/.git/hooks/"
+git clone "https://korap.ids-mannheim.de/gerrit/private/collocatordb"
 cd collocatordb
 mkdir -p build
 cd build
-cmake3 ..
+cmake3 -DCMAKE_INSTALL_PREFIX=/usr/local ..
 make && ctest3 --extra-verbose && sudo make install
 ```
 ## Provided API
 ```
 typedef struct {
-    uint32_t w2;
-    uint64_t f2;
-    uint64_t raw;
-    double pmi;
-    double npmi;
-    double llr;
-    double lfmd;
-    double md;
-    uint64_t left_raw;
-    uint64_t right_raw;
-    double left_pmi;
-    double right_pmi;
-    double dice;
-    double logdice;
-    double ldaf;
-    int window;
-    int af_window;
-} Collocator ;
+  uint32_t w2;
+  uint64_t f2;
+  uint64_t raw;
+  double pmi;
+  double npmi;
+  double llr;
+  double lfmd;
+  double md;
+  uint64_t left_raw;
+  uint64_t right_raw;
+  double left_pmi;
+  double right_pmi;
+  double dice;
+  double logdice;
+  double ldaf;
+  int window;
+  int af_window;
+} COLLOCATOR ;
 
 COLLOCATORDB *open_collocatordb(const char *s);
 COLLOCATORDB *open_collocatordb_for_write(const char *s);
 void inc_collocator(COLLOCATORDB *db, uint64_t w1, uint64_t w2, int8_t dist);
 void dump_collocators(COLLOCATORDB *db, uint32_t w1, uint32_t w2, int8_t dist);
-Collocator *get_collocators(COLLOCATORDB *db, uint32_t w1);
-Collocator *get_collocation_scores(COLLOCATORDB *db, uint32_t w1, uint32_t w2);
+COLLOCATOR *get_collocators(COLLOCATORDB *db, uint32_t w1);
+COLLOCATOR *get_collocation_scores(COLLOCATORDB *db, uint32_t w1, uint32_t w2);
 char *get_collocators_as_json(COLLOCATORDB *db, uint32_t w1);
 char *get_collocation_scores_as_json(COLLOCATORDB *db, uint32_t w1, uint32_t w2);
 char *get_word(COLLOCATORDB *db, uint32_t w1);
@@ -68,9 +68,8 @@ void read_vocab(COLLOCATORDB *db, char *fname);
 ```
 
 ## TODO
-* extend APIs
-* add unit and ci tests
-* improve build process
+* extend API
+* add more unit tests
 
 ## License
 
