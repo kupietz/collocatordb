@@ -1,0 +1,44 @@
+image: gcc
+
+build-and-test:
+  stage: build
+  before_script:
+    - pwd
+    - source `find .. -name section_helper.sh`
+
+    - start_section install_linux_packages "Installing missing Linux packages"
+    - apt update && apt -y install cmake libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libomp-dev
+    - end_section install_linux_packages
+
+    - start_section install_rocksdb_static "Building and installing rocksdb-static"
+    - curl -L https://github.com/facebook/rocksdb/archive/refs/tags/v5.11.3.tar.gz | tar zx
+    - cd rocksdb-5.11.3
+    - export PROCS=$(cat /proc/cpuinfo | grep -c processor)
+    - make -j $PROCS static_lib DISABLE_WARNING_AS_ERROR=1 WARNING_FLAGS=-w
+    - make install-static DISABLE_WARNING_AS_ERROR=1 WARNING_FLAGS=-w
+    - end_section install_rocksdb_static
+
+    - start_section install_rocksdb_shared "Building and installing rocksdb-shared"
+    - make -j $PROCS shared_lib DISABLE_WARNING_AS_ERROR=1 WARNING_FLAGS=-w
+    - make install-shared DISABLE_WARNING_AS_ERROR=1 WARNING_FLAGS=-w
+    - cd ..
+    - end_section rocksdb_shared
+
+
+  script:
+    - start_section install_collocatordb "Building and installing collocatordb"
+    - git clone "https://korap.ids-mannheim.de/gerrit/private/collocatordb"
+    - cd collocatordb
+    - mkdir -p build
+    - cd build
+    - cmake ..
+    - make
+    - make install
+    - ctest --extra-verbose
+    - end_section install_collocatordb
+
+  artifacts:
+    paths:
+      - "*.a"
+      - "*.so.*"
+
