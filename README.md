@@ -45,7 +45,7 @@ make && ctest --extra-verbose && sudo make install
 
 ## Provided API
 
-```C
+```c
 typedef struct {
   uint32_t w2;
   uint64_t f2;
