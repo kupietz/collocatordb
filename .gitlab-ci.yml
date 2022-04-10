@@ -21,19 +21,19 @@ build-and-test:
     - start_section install_rocksdb_shared "Building and installing rocksdb-shared"
     - make -j $PROCS shared_lib DISABLE_WARNING_AS_ERROR=1 WARNING_FLAGS=-w
     - make install-shared DISABLE_WARNING_AS_ERROR=1 WARNING_FLAGS=-w
+    - ldconfig
     - cd ..
     - end_section rocksdb_shared
 
 
   script:
     - start_section install_collocatordb "Building and installing collocatordb"
-    - git clone "https://korap.ids-mannheim.de/gerrit/private/collocatordb"
-    - cd collocatordb
     - mkdir -p build
     - cd build
     - cmake ..
     - make
     - make install
+    - ldconfig
     - ctest --extra-verbose
     - end_section install_collocatordb
 
