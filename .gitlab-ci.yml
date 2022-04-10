@@ -10,6 +10,7 @@ build-and-test:
     - apt update && apt -y install cmake libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libomp-dev
     - end_section install_linux_packages
 
+  script:
     - start_section install_rocksdb_static "Building and installing rocksdb-static"
     - curl -L https://github.com/facebook/rocksdb/archive/refs/tags/v5.11.3.tar.gz | tar zx
     - cd rocksdb-5.11.3
@@ -25,8 +26,6 @@ build-and-test:
     - cd ..
     - end_section rocksdb_shared
 
-
-  script:
     - start_section install_collocatordb "Building and installing collocatordb"
     - mkdir -p build
     - cd build
@@ -35,10 +34,13 @@ build-and-test:
     - make install
     - ldconfig
     - ctest --extra-verbose
+    - cd ..
     - end_section install_collocatordb
 
   artifacts:
     paths:
-      - "*.a"
-      - "*.so.*"
+      - "build/*.a"
+      - "build/*.so*"
+      - "rocksdb-5.11.3/*.a"
+      - "rocksdb-5.11.3/*.so*"
 
