@@ -41,6 +41,6 @@ build-and-test:
     paths:
       - "build/*.a"
       - "build/*.so*"
-      - "rocksdb-5.11.3/*.a"
-      - "rocksdb-5.11.3/*.so*"
+#      - "rocksdb-5.11.3/*.a"
+#      - "rocksdb-5.11.3/*.so*"
 
