@@ -1,40 +1,51 @@
 # CollocatorDB: Storing and retrieving collocation counts based on [RocksDB](https://github.com/facebook/rocksdb)
 
 ## Installation
+
 ### Install RocksDB and prerequisites
+
 * prerequisites on CentOS, FeDora, RHEL
-    ```
+
+    ```bash
     sudo yum install cmake3 snappy snappy-devel zlib zlib-devel bzip2 bzip2-devel lz4-devel libzstd-devel libomp-devel
-    
+
     git clone https://github.com/gflags/gflags.git
     cd gflags
     git checkout v2.0
     ./configure && make && sudo make install
     cd ..
     ```
+
 * prerequisites on Ubuntu, Debian
-    ```
+
+    ```bash
     sudo apt-get install cmake libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libomp-dev
     ```
+
 * install [RocksDB v5.11.3](https://github.com/facebook/rocksdb/releases/tag/v5.11.3)
-    ```
-    git clone https://github.com/facebook/rocksdb.git
-    cd rocksdb
-    git checkout v5.11.3
+
+    ```bash
+    curl -L https://github.com/facebook/rocksdb/archive/refs/tags/v5.11.3.tar.gz | tar zx
+    cd rocksdb-5.11.3
     make static_lib DISABLE_WARNING_AS_ERROR=1 && sudo make install-static DISABLE_WARNING_AS_ERROR=1
     make shared_lib DISABLE_WARNING_AS_ERROR=1 && sudo make install-shared DISABLE_WARNING_AS_ERROR=1
+    ldconfig
     ```
+
 ### Install CollocatorDB
-```
+
+```bash
 git clone "https://korap.ids-mannheim.de/gerrit/private/collocatordb"
 cd collocatordb
 mkdir -p build
 cd build
-cmake3 -DCMAKE_INSTALL_PREFIX=/usr/local ..
-make && ctest3 --extra-verbose && sudo make install
+cmake -DCMAKE_INSTALL_PREFIX=/usr/local ..
+make && ctest --extra-verbose && sudo make install
 ```
+
 ## Provided API
-```
+
+```C
 typedef struct {
   uint32_t w2;
   uint64_t f2;
@@ -68,6 +79,7 @@ void read_vocab(COLLOCATORDB *db, char *fname);
 ```
 
 ## TODO
+
 * extend API
 * add more unit tests
 
