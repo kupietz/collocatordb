@@ -38,4 +38,5 @@ add_test(STATIC_LIBRARY_TEST static_library_test)
 # Install library
 install(TARGETS ${PROJECT_NAME} collocatordb_static
                 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
                 PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
