@@ -35,7 +35,7 @@
 ### Install CollocatorDB
 
 ```bash
-git clone "https://korap.ids-mannheim.de/gerrit/private/collocatordb"
+git clone "https://korap.ids-mannheim.de/gerrit/ids-kl/collocatordb"
 cd collocatordb
 mkdir -p build
 cd build
