@@ -21,11 +21,13 @@ build-and-test:
     - export PROCS=$(nproc)
     - make -j $PROCS static_lib DISABLE_WARNING_AS_ERROR=1 WARNING_FLAGS=-w
     - make install-static DISABLE_WARNING_AS_ERROR=1 WARNING_FLAGS=-w
+    - strip --strip-unneeded `find -name librocksdb.a`
     - end_section install_rocksdb_static
 
     - start_section install_rocksdb_shared "Building and installing rocksdb-shared"
     - make -j $PROCS shared_lib DISABLE_WARNING_AS_ERROR=1 WARNING_FLAGS=-w
     - make install-shared DISABLE_WARNING_AS_ERROR=1 WARNING_FLAGS=-w
+    - strip --strip-unneeded `find -name librocksdb.so`
     - ldconfig
     - cd ..
     - end_section rocksdb_shared
@@ -38,13 +40,13 @@ build-and-test:
     - make install
     - ldconfig
     - ctest --extra-verbose
+    - strip --strip-unneeded `find -name libcollocatordb.so`
     - cd ..
     - end_section install_collocatordb
 
   artifacts:
     paths:
-      - "build/*.a"
-      - "build/*.so*"
-#      - "rocksdb-5.11.3/*.a"
-#      - "rocksdb-5.11.3/*.so*"
-
+      - "rocksdb-5.11.3/*.so*"
+      - "rocksdb-5.11.3/*.a"
+      - "build/libcollocatordb.so*"
+      - "build/libcollocatordb*.a"
