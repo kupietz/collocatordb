@@ -2,6 +2,10 @@ image: gcc
 
 build-and-test:
   stage: build
+  cache:
+    - key: one-key-to-rule-them-all
+      paths:
+        - rocksdb-5.11.3/
   before_script:
     - pwd
     - source `find .. -name section_helper.sh`
@@ -14,7 +18,7 @@ build-and-test:
     - start_section install_rocksdb_static "Building and installing rocksdb-static"
     - curl -L https://github.com/facebook/rocksdb/archive/refs/tags/v5.11.3.tar.gz | tar zx
     - cd rocksdb-5.11.3
-    - export PROCS=$(cat /proc/cpuinfo | grep -c processor)
+    - export PROCS=$(nproc)
     - make -j $PROCS static_lib DISABLE_WARNING_AS_ERROR=1 WARNING_FLAGS=-w
     - make install-static DISABLE_WARNING_AS_ERROR=1 WARNING_FLAGS=-w
     - end_section install_rocksdb_static
