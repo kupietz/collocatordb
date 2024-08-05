@@ -11,21 +11,32 @@ if("${isSystemDir}" STREQUAL "-1")
     set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 endif("${isSystemDir}" STREQUAL "-1")
 
-include_directories(/usr/local/include;/usr/local/kl/include)
-link_directories(/usr/local/kl/lib /usr/local/lib)
-find_library(ROCKSDB NAMES librocksdb.so.5.11)
+include_directories(/usr/local/include /opt/homebrew/include)
+link_directories(/usr/local/lib64 /usr/local/lib /usr/lib64 /usr/lib /opt/homebrew/lib)
+if (1 AND APPLE)
+       message("MacOS deteted")
+       set(LIBRT "")
+       find_library(ROCKSDB NAMES librocksdb.a)
+       set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -flat_namespace")
+       set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flat_namespace")
+else()
+       set(LIBRT "rt")
+       find_library(ROCKSDB NAMES librocksdb.so.5.11)
+endif()
 find_library(ROCKSDB_STATIC librocksdb.a)
 
 enable_testing()
 add_library(collocatordb SHARED src/collocatordb.cc)
-target_link_libraries(collocatordb pthread rt snappy z bz2 lz4 zstd ${ROCKSDB} dl)
+
+target_link_libraries(collocatordb pthread ${LIBRT} snappy z bz2 lz4 zstd ${ROCKSDB} dl)
+
 set_target_properties(collocatordb PROPERTIES
         VERSION ${PROJECT_VERSION}
         SOVERSION 1
         PUBLIC_HEADER src/collocatordb.h)
 
 add_library(collocatordb_static STATIC src/collocatordb.cc)
-target_link_libraries(collocatordb_static ${ROCKSDB_STATIC} pthread rt snappy z bz2 lz4 zstd dl)
+target_link_libraries(collocatordb_static ${ROCKSDB_STATIC} pthread ${LIBRT} snappy z bz2 lz4 zstd dl)
 
 add_executable(basic_test tests/basic_test.c tests/acutest.h)
 TARGET_LINK_LIBRARIES(basic_test ${ROCKSDB} collocatordb)
@@ -40,3 +51,8 @@ install(TARGETS ${PROJECT_NAME} collocatordb_static
                 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
                 ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
                 PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+if (1 AND APPLE)
+    add_custom_command(TARGET collocatordb POST_BUILD
+        COMMAND install_name_tool -id "/usr/local/lib/libcollocatordb.1.dylib" $<TARGET_FILE:collocatordb>)
+endif()

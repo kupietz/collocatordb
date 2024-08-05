@@ -4,7 +4,7 @@
 
 ### Install RocksDB and prerequisites
 
-* prerequisites on CentOS, FeDora, RHEL
+* on CentOS, Fedora, RHEL
 
     ```bash
     sudo yum install cmake3 snappy snappy-devel zlib zlib-devel bzip2 bzip2-devel lz4-devel libzstd-devel libomp-devel
@@ -16,20 +16,39 @@
     cd ..
     ```
 
-* prerequisites on Ubuntu, Debian
+* on Ubuntu, Debian
 
     ```bash
     sudo apt-get install cmake libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libomp-dev
     ```
 
-* install [RocksDB v5.11.3](https://github.com/facebook/rocksdb/releases/tag/v5.11.3)
+* on MacOS
 
     ```bash
-    curl -L https://github.com/facebook/rocksdb/archive/refs/tags/v5.11.3.tar.gz | tar zx
-    cd rocksdb-5.11.3
-    make static_lib DISABLE_WARNING_AS_ERROR=1 && sudo make install-static DISABLE_WARNING_AS_ERROR=1
-    make shared_lib DISABLE_WARNING_AS_ERROR=1 && sudo make install-shared DISABLE_WARNING_AS_ERROR=1
+    brew install cmake snappy zlib bzip2 lz4 zstd libomp gflags
+    ```
+
+* install our fork of [RocksDB v5.11.3.fb](https://github.com/kupietz/rocksdb/tree/5.11.fb)
+  * on Linux
+
+    ```bash
+    git clone https://github.com/kupietz/rocksdb.git -b 5.11.fb --single-branch
+    cd rocksdb
+    make -j $(nproc) static_lib DISABLE_WARNING_AS_ERROR=1 && sudo make install-static DISABLE_WARNING_AS_ERROR=1
+    make -j $(nproc) shared_lib DISABLE_WARNING_AS_ERROR=1 && sudo make install-shared DISABLE_WARNING_AS_ERROR=1
+    cd build
     ldconfig
+    ```
+
+  * on MacOS
+
+    ```bash
+    git clone https://github.com/kupietz/rocksdb.git -b 5.11.fb --single-branch
+    cd rocksdb
+    mkdir -f build
+    cd build
+    cmake .. -DWITH_SNAPPY=1 -DWITH_LZ4=1 -DWITH_ZLIB=1 -DWITH_GFLAGS=1 -DCMAKE_INSTALL_LIBDIR=/usr/local/lib
+    make -j $(sysctl -n hw.ncpu) && sudo make install
     ```
 
 ### Install CollocatorDB

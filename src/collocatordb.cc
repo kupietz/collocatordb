@@ -17,6 +17,7 @@
 #include <rocksdb/merge_operator.h>
 #include <rocksdb/slice_transform.h>
 #include "merge_operators.h"
+#include "export.h"
 
 #define WINDOW_SIZE 5
 #define FREQUENCY_THRESHOLD 5
@@ -842,23 +843,23 @@ extern "C" {
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
 #endif
-  COLLOCATORS *open_collocatordb_for_write(char *dbname) {
+  DLL_EXPORT COLLOCATORS *open_collocatordb_for_write(char *dbname) {
 		return new rocksdb::CollocatorDB(dbname, false);
 	}
 
-	COLLOCATORS *open_collocatordb(char *dbname) {
+	DLL_EXPORT COLLOCATORS *open_collocatordb(char *dbname) {
 		return new rocksdb::CollocatorDB(dbname, true);
 	}
 	
-	void inc_collocator(COLLOCATORS *db, uint32_t w1, uint32_t w2, int8_t dist) {
+	DLL_EXPORT void inc_collocator(COLLOCATORS *db, uint32_t w1, uint32_t w2, int8_t dist) {
 		db->inc(w1, w2, dist);
 	}
 
-  void dump_collocators(COLLOCATORS *db, uint32_t w1, uint32_t w2, int8_t dist) {
+  DLL_EXPORT void dump_collocators(COLLOCATORS *db, uint32_t w1, uint32_t w2, int8_t dist) {
     db->dump(w1, w2, dist);
   }
 
-  COLLOCATORS *get_collocators(COLLOCATORS *db, uint32_t w1) {
+  DLL_EXPORT COLLOCATORS *get_collocators(COLLOCATORS *db, uint32_t w1) {
     std::vector<Collocator> c = db->get_collocators(w1);
     if (c.empty())
       return NULL;
@@ -868,7 +869,7 @@ extern "C" {
     return p;
   }
 
-  COLLOCATORS *get_collocation_scores(COLLOCATORS *db, uint32_t w1, uint32_t w2) {
+  DLL_EXPORT COLLOCATORS *get_collocation_scores(COLLOCATORS *db, uint32_t w1, uint32_t w2) {
     std::vector<Collocator> c = db->get_collocation_scores(w1, w2);
     if (c.empty())
       return NULL;
@@ -878,20 +879,20 @@ extern "C" {
     return p;
   }
 
-  char *get_word(COLLOCATORS *db, uint32_t w) {
+  DLL_EXPORT char *get_word(COLLOCATORS *db, uint32_t w) {
     return strdup(db->getWord(w).c_str());
   }
 
-  void read_vocab(COLLOCATORS *db, char *fname) {
+  DLL_EXPORT void read_vocab(COLLOCATORS *db, char *fname) {
     std::string fName(fname);
     db->readVocab(fName);
   }
 
-  const char *get_collocators_as_json(COLLOCATORS *db, uint32_t w1) {
+  DLL_EXPORT const char *get_collocators_as_json(COLLOCATORS *db, uint32_t w1) {
     return strdup(db->collocators2json(w1, db->get_collocators(w1)).c_str());
   }
 
-  const char *get_collocation_scores_as_json(COLLOCATORS *db, uint32_t w1, uint32_t w2) {
+  DLL_EXPORT const char *get_collocation_scores_as_json(COLLOCATORS *db, uint32_t w1, uint32_t w2) {
     return strdup(db->collocators2json(w1, db->get_collocation_scores(w1, w2)).c_str());
   }
 

@@ -15,9 +15,9 @@ build-and-test:
     - end_section install_linux_packages
 
   script:
-    - start_section install_rocksdb_static "Building and installing rocksdb-static"
-    - curl -L https://github.com/facebook/rocksdb/archive/refs/tags/v5.11.3.tar.gz | tar zx
-    - cd rocksdb-5.11.3
+    - start_section install_rocksdb "Building and installing rocksdb"
+    - git clone https://github.com/kupietz/rocksdb.git -b 5.11.fb --single-branch
+    - cd rocksdb
     - export PROCS=$(nproc)
     - make -j $PROCS static_lib DISABLE_WARNING_AS_ERROR=1 WARNING_FLAGS=-w
     - make install-static DISABLE_WARNING_AS_ERROR=1 WARNING_FLAGS=-w
@@ -30,7 +30,7 @@ build-and-test:
     - strip --strip-unneeded `find -name librocksdb.so`
     - ldconfig
     - cd ..
-    - end_section rocksdb_shared
+    - end_section install_rocksdb
 
     - start_section install_collocatordb "Building and installing collocatordb"
     - mkdir -p build
