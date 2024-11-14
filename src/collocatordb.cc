@@ -471,8 +471,7 @@ namespace rocksdb {
       exit(1);
     }
     uint64_t i = 0;
-    while (!feof(fin)) {
-      fscanf(fin, "%s %lu", strbuf, &freq);
+    while (fscanf(fin, "%s %lu", strbuf, &freq) == 2) {
       _vocab.push_back({strbuf, freq});
       total += freq;
       i++;
