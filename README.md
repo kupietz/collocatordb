@@ -97,6 +97,11 @@ char *get_word(COLLOCATORDB *db, uint32_t w1);
 void read_vocab(COLLOCATORDB *db, char *fname);
 ```
 
+## Changes
+
+* v1.3.1 (2024-11-14)
+  * fixed calculation of total token count
+
 ## TODO
 
 * extend API
