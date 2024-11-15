@@ -100,6 +100,9 @@ char *get_version();
 
 ## Changes
 
+* v1.3.2 (2024-11-15)
+  * added `get_version()`, which returns version string
+
 * v1.3.1 (2024-11-14)
   * fixed calculation of total token count
 
