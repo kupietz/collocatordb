@@ -103,6 +103,11 @@ void test_writing() {
 
   rmrf(rocksdbfn);
 }
+void test_version_function() {
+  char *version = get_version();
+  TEST_CHECK(strcmp(version, "1.3.2") == 0);
+  TEST_MSG("Unexpected version: %s", version);
+}
 
 TEST_LIST = {
     { "open database for reading", test_open_db },
@@ -111,5 +116,6 @@ TEST_LIST = {
     { "collocation analysis", test_collocation_analysis },
     { "collocation analysis as json", test_collocation_analysis_as_json },
     { "writing", test_writing },
+    { "version function", test_version_function },
     { NULL, NULL }
 };

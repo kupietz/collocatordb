@@ -95,6 +95,7 @@ char *get_collocators_as_json(COLLOCATORDB *db, uint32_t w1);
 char *get_collocation_scores_as_json(COLLOCATORDB *db, uint32_t w1, uint32_t w2);
 char *get_word(COLLOCATORDB *db, uint32_t w1);
 void read_vocab(COLLOCATORDB *db, char *fname);
+char *get_version();
 ```
 
 ## Changes

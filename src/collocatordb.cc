@@ -18,6 +18,7 @@
 #include <rocksdb/slice_transform.h>
 #include "merge_operators.h"
 #include "export.h"
+#include "config.h"
 
 #define WINDOW_SIZE 5
 #define FREQUENCY_THRESHOLD 5
@@ -893,6 +894,10 @@ extern "C" {
 
   DLL_EXPORT const char *get_collocation_scores_as_json(COLLOCATORS *db, uint32_t w1, uint32_t w2) {
     return strdup(db->collocators2json(w1, db->get_collocation_scores(w1, w2)).c_str());
+  }
+
+  DLL_EXPORT const char *get_version() {
+    return PROJECT_VERSION;
   }
 
 #ifdef __clang__
