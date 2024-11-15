@@ -9,16 +9,12 @@ char dbpath[] = "../tests/data/wpd19_10000";
 const int testword = 10; // ist
 
 void test_open_db() {
-  COLLOCATORDB *cdb;
-
-  cdb = open_collocatordb(dbpath);
+  COLLOCATORDB* cdb = open_collocatordb(dbpath);
   TEST_ASSERT(cdb != NULL);
 }
 
 void test_get_word() {
-  COLLOCATORDB *cdb;
-
-  cdb = open_collocatordb(dbpath);
+  COLLOCATORDB* cdb = open_collocatordb(dbpath);
   TEST_ASSERT(cdb != NULL);
   char *word = get_word(cdb, testword);
   char *expected = "ist";
@@ -28,9 +24,7 @@ void test_get_word() {
 }
 
 void test_collocation_scores() {
-  COLLOCATORDB *cdb;
-
-  cdb = open_collocatordb(dbpath);
+  COLLOCATORDB* cdb = open_collocatordb(dbpath);
   TEST_ASSERT(cdb != NULL);
   char *expected = " { \"f1\": 217,\"w1\":\"Aluminium\", \"N\": 152743, \"collocates\": [{\"word\":\"Anwendungstechnologie\",\"f2\":16,\"f\":16,\"npmi\":0.594849,\"pmi\":8.4592,\"llr\":188.227,\"lfmd\":16.4592,\"md\":12.4592,\"dice\":0.0711111,\"ld\":10.1862,\"ln_count\":16,\"rn_count\":0,\"ln_pmi\":9.4592,\"rn_pmi\":-1,\"ldaf\":11.1358,\"win\":32,\"afwin\":32}]}\n";
   char *produced = get_collocation_scores_as_json(cdb, 62, 966);
@@ -41,9 +35,7 @@ void test_collocation_scores() {
 
 
 void test_collocation_analysis_as_json() {
-  COLLOCATORDB *cdb;
-
-  cdb = open_collocatordb(dbpath);
+  COLLOCATORDB* cdb = open_collocatordb(dbpath);
   TEST_ASSERT(cdb != NULL);
   char *json = get_collocators_as_json(cdb, testword);
   char *needle = "\"word\":\"um\",\"f2\":264,\"f\":5,\"npmi\":-0.0556349,\"pmi\":-0.958074,\"llr\":2.87723,\"lfmd\":3.68578,\"md\":1.36385,\"dice\":0.00169952,\"ld\":4.79935,\"ln_count\":0,\"rn_count\":1,\"ln_pmi\":-1,\"rn_pmi\":-1,\"ldaf\":4.79935,\"win\":668,\"afwin\":668";
@@ -52,9 +44,7 @@ void test_collocation_analysis_as_json() {
 }
 
 void test_collocation_analysis() {
-  COLLOCATORDB *cdb;
-
-  cdb = open_collocatordb(dbpath);
+  COLLOCATORDB* cdb = open_collocatordb(dbpath);
   TEST_ASSERT(cdb != NULL);
   char *expected = "Anwendungstechnologie";
   const COLLOCATOR *c = get_collocators(cdb, 62);

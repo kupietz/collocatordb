@@ -1,15 +1,15 @@
 #define EXPORT __attribute__((visibility("visible")))
 #define IMPORT
 
-#include <assert.h>
+#include <cassert>
 #include <memory>
 #include <iostream>
 #include <algorithm>
 #include <vector>
-#include <stdint.h>
+#include <cstdint>
 #include <string>
 #include <sstream> // for ostringstream
-#include <math.h>
+#include <cmath>
 #include <rocksdb/cache.h>
 #include "rocksdb/db.h"
 #include "rocksdb/env.h"
