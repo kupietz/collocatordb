@@ -9,3 +9,6 @@ CMakeFiles/
 .*LOG
 LOG.*
 !.gitlab-ci.yml
+LOG
+rocksdb
+
