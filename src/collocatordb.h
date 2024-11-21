@@ -128,4 +128,6 @@ extern char *get_collocation_scores_as_json(COLLOCATORDB *db, uint32_t w1, uint3
 extern char *get_word(COLLOCATORDB *db, uint32_t w1);
 extern void read_vocab(COLLOCATORDB *db, char *fname);
 extern char *get_version();
+extern uint64_t get_word_id(COLLOCATORDB *db, const char *word);
+
 #endif

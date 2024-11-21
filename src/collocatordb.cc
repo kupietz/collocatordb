@@ -327,6 +327,8 @@ namespace rocksdb {
                                             void readVocab(string fname);
                                             string getWord(uint32_t w1);
 
+                                            uint64_t getWordId(const char *word) const;
+
                                             CollocatorDB(const char *db_name, bool read_only);
 
                                             // public interface of CollocatorDB.
@@ -794,6 +796,14 @@ string rocksdb::CollocatorDB::getWord(uint32_t w1) {
   return _vocab[w1].word;
 }
 
+uint64_t rocksdb::CollocatorDB::getWordId(const char *word) const {
+  for (uint64_t i = 0; i < _vocab.size(); i++) {
+    if (strcmp(_vocab[i].word.c_str(), word) == 0)
+      return i;
+  }
+  return 0;
+}
+
 string rocksdb::CollocatorDB::collocators2json(uint32_t w1, vector<Collocator> collocators) {
   ostringstream s;
   int i = 0;
@@ -881,6 +891,10 @@ extern "C" {
 
   DLL_EXPORT char *get_word(COLLOCATORS *db, uint32_t w) {
     return strdup(db->getWord(w).c_str());
+  }
+
+  DLL_EXPORT uint64_t get_word_id(COLLOCATORS *db, char *word) {
+    return db->getWordId(word);
   }
 
   DLL_EXPORT void read_vocab(COLLOCATORS *db, char *fname) {
