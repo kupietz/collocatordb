@@ -1,16 +1,15 @@
-#include <typeinfo>
-#include <assert.h>
-#include <memory>
 #include <iostream>
-#include <stdint.h>
-#include "../src/collocatordb.h"
-#include <thread>
-#include <chrono>
+#include <vector>
+#include <cstdint>
+#include <string>
 #include <sstream> // for ostringstream
 
+#include <rocksdb/cache.h>
+#include <thread>
+#include "../src/collocatordb.h"
 using namespace rocksdb;
 
-  
+
 int main(int argc, char** argv) {
   const int START=0;
   const int STOP=1500000;
