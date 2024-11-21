@@ -63,3 +63,14 @@ if (1 AND APPLE)
     add_custom_command(TARGET collocatordb POST_BUILD
         COMMAND install_name_tool -id "/usr/local/lib/libcollocatordb.1.dylib" $<TARGET_FILE:collocatordb>)
 endif()
+
+file(GLOB EXAMPLES_SOURCES examples/*.c examples/*.cc)
+
+add_custom_target(examples)
+
+foreach(EXAMPLE_SOURCE ${EXAMPLES_SOURCES})
+    get_filename_component(EXAMPLE_NAME ${EXAMPLE_SOURCE} NAME_WE)
+    add_executable(${EXAMPLE_NAME} EXCLUDE_FROM_ALL ${EXAMPLE_SOURCE})
+    target_link_libraries(${EXAMPLE_NAME} ${ROCKSDB} collocatordb)
+    add_dependencies(examples ${EXAMPLE_NAME})
+endforeach()
