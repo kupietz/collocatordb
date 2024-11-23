@@ -127,6 +127,12 @@ void test_get_word_id() {
   TEST_MSG("Unexpected word id: %lu", id);
 }
 
+void test_collocatordb_query_command_line_tool() {
+  int result = system("../build/collocatordb_query ../tests/data/wpd19_10000 ist > /dev/null 2>&1");
+  TEST_CHECK(result == 0);
+  TEST_MSG("collectordb_query command failed with result: %d", result);
+}
+
 TEST_LIST = {
     { "open database for reading", test_open_db },
     { "get word", test_get_word },
@@ -136,5 +142,6 @@ TEST_LIST = {
     { "writing", test_writing },
     { "version function", test_version_function },
     { "get word id", test_get_word_id },
+    { "collocatordb_query command line tool", test_collocatordb_query_command_line_tool},
     { NULL, NULL }
 };
