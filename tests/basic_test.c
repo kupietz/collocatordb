@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #define __USE_XOPEN_EXTENDED
@@ -66,16 +67,24 @@ int rmrf(char *path) {
 }
 
 void test_writing() {
-  char *tmp = tempnam(NULL, NULL);
+  char tmp_template[] = "/tmp/tmpfileXXXXXX";
+  int fd = mkstemp(tmp_template);
+  if (fd == -1) {
+    perror("mkstemp");
+    exit(EXIT_FAILURE);
+  }
+  close(fd);
+  char *tmp = strdup(tmp_template);
+
   long size = 0;
   int i;
 
-  char *rocksdbfn = malloc(strlen(tmp)+strlen(".rocksdb"));
-  strcpy (rocksdbfn, tmp);
+  char *rocksdbfn = malloc(strlen(tmp) + strlen(".rocksdb") + 1);
+  strcpy(rocksdbfn, tmp);
   strcat(rocksdbfn, ".rocksdb");
   COLLOCATORDB *cdb = open_collocatordb_for_write(rocksdbfn);
 
-  char *vocabfn = malloc(strlen(tmp)+strlen(".vocab"));
+  char *vocabfn = malloc(strlen(tmp) + strlen(".vocab") + 1);
   strcpy(vocabfn, tmp);
   strcat(vocabfn, ".vocab");
   FILE *h = fopen(vocabfn, "w");
@@ -85,7 +94,7 @@ void test_writing() {
   fclose(h);
   read_vocab(cdb, vocabfn);
   inc_collocator(cdb, 0, 1, 4); size++;
-  for (i=0; i < 1000; i++) {
+  for (i = 0; i < 1000; i++) {
     inc_collocator(cdb, 0, 1, i % 5); size++;
     inc_collocator(cdb, 0, 1, -i % 5); size++;
     inc_collocator(cdb, 1, 0, i % 5); size++;
@@ -103,6 +112,7 @@ void test_writing() {
 
   rmrf(rocksdbfn);
 }
+
 void test_version_function() {
   char *version = get_version();
   TEST_CHECK(strcmp(version, "1.3.2") == 0);
