@@ -74,6 +74,7 @@ typedef struct {
   double llr;
   double lfmd;
   double md;
+  double md_nws;
   uint64_t left_raw;
   uint64_t right_raw;
   double left_pmi;
@@ -99,6 +100,8 @@ char *get_version();
 ```
 
 ## Changes
+
+  * added `md_nws` MI² score based on nominal window size (=10) instead of actual window size, for which only positions are counted where the collocate actually occurs
 
 * v1.3.2 (2024-11-15)
   * added `get_version()`, which returns version string

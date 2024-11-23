@@ -106,6 +106,7 @@ typedef struct {
   double llr;
   double lfmd;
   double md;
+  double md_nws;
   uint64_t left_raw;
   uint64_t right_raw;
   double left_pmi;

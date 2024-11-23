@@ -7,6 +7,7 @@
 #include "rocksdb/db.h"
 #include "rocksdb/env.h"
 #include "rocksdb/table.h"
+#include "rocksdb/slice.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -52,6 +53,7 @@ public:
   double llr;
   double lfmd;
   double md;
+  double md_nws;
   uint64_t left_raw;
   uint64_t right_raw;
   double left_pmi;
@@ -603,8 +605,9 @@ void CollocatorDB::applyCAMeasures(
   uint64_t f1 = _vocab[w1].freq, f2 = _vocab[w2].freq;
   double o = sum, r1 = f1 * true_window_size, c1 = f2, e = r1 * c1 / total,
          pmi = log2(o / e), md = log2(o * o / e), lfmd = log2(o * o * o / e),
-         llr = ca_ll(f1, f2, sum, total, true_window_size);
-  double ld = ca_logdice(f1, f2, sum, total, true_window_size);
+         llr = ca_ll(f1, f2, sum, total, true_window_size),
+         md_nws = ca_md(f1, f2, sum, total, 2 * WINDOW_SIZE),
+         ld = ca_logdice(f1, f2, sum, total, true_window_size);
 
   int bestWindow = usedPositions;
   double bestAF = ld;
@@ -638,6 +641,7 @@ void CollocatorDB::applyCAMeasures(
              llr,
              lfmd,
              md,
+             md_nws,
              sumWindow[WINDOW_SIZE],
              sumWindow[WINDOW_SIZE - 1],
              ca_pmi(f1, f2, sumWindow[WINDOW_SIZE], total, 1),
@@ -828,7 +832,7 @@ string CollocatorDB::collocators2json(uint32_t w1,
       << "\"," << "\"f2\":" << c.f2 << "," << "\"f\":" << c.raw << ","
       << "\"npmi\":" << c.npmi << "," << "\"pmi\":" << c.pmi << ","
       << "\"llr\":" << c.llr << "," << "\"lfmd\":" << c.lfmd << ","
-      << "\"md\":" << c.md << "," << "\"dice\":" << c.dice << ","
+      << "\"md\":" << c.md << "," << "\"md_nws\":" << c.md_nws << "," << "\"dice\":" << c.dice << ","
       << "\"ld\":" << c.logdice << "," << "\"ln_count\":" << c.left_raw << ","
       << "\"rn_count\":" << c.right_raw << "," << "\"ln_pmi\":" << c.left_pmi
       << "," << "\"rn_pmi\":" << c.right_pmi << "," << "\"ldaf\":" << c.ldaf
