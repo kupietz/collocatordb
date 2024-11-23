@@ -1,5 +1,6 @@
 .idea/
 build/
+build-clion/
 cmake-build-debug/
 lib/
 bin/
@@ -11,4 +12,4 @@ LOG.*
 !.gitlab-ci.yml
 LOG
 rocksdb
-
+!.idea/
