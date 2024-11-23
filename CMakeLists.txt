@@ -64,10 +64,21 @@ if (1 AND APPLE)
         COMMAND install_name_tool -id "/usr/local/lib/libcollocatordb.1.dylib" $<TARGET_FILE:collocatordb>)
 endif()
 
+file(GLOB TOOLS_SOURCES tools/*.c tools/*.cc)
+add_custom_target(tools)
+foreach(TOOL_SOURCE ${TOOLS_SOURCES})
+    get_filename_component(TOOL_NAME ${TOOL_SOURCE} NAME_WE)
+    add_executable(${TOOL_NAME} ${TOOL_SOURCE})
+    target_link_libraries(${TOOL_NAME} ${ROCKSDB} collocatordb)
+    set_target_properties(${TOOL_NAME} PROPERTIES
+            INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib64"
+            BUILD_WITH_INSTALL_RPATH TRUE)
+    add_dependencies(tools ${TOOL_NAME})
+    install(TARGETS ${TOOL_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR})
+endforeach()
+
 file(GLOB EXAMPLES_SOURCES examples/*.c examples/*.cc)
-
 add_custom_target(examples)
-
 foreach(EXAMPLE_SOURCE ${EXAMPLES_SOURCES})
     get_filename_component(EXAMPLE_NAME ${EXAMPLE_SOURCE} NAME_WE)
     add_executable(${EXAMPLE_NAME} EXCLUDE_FROM_ALL ${EXAMPLE_SOURCE})

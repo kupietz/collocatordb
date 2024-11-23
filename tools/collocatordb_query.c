@@ -5,12 +5,12 @@
 #include "../src/collocatordb.h"
 
 int main(int argc, char *argv[]) {
-  if (argc < 3) {
+  if (argc < 3 || (argv > 0 && strcmp(argv[1], "-h") == 0)) {
     fprintf(stderr,
-            "Usage: %s <dbpath> <word1> [word2] ... [wordN]\n"
-            "Gets the collocators of the given words from a collocatordb and "
-            "prints them as json.\n"
-            "Example: %s ../tests/data/wpd19_10000 geht auch\n",
+            "Usage: %s <dbpath> <word1> [word2] ... [wordN]\n\n"
+            "Gets the collocates of the given words from a collocatordb and "
+            "prints them as json.\n\n"
+            "EXAMPLE\n../tests/data/wpd19_10000 geht auch\n",
             argv[0], argv[0]);
     return 1;
   }
@@ -40,8 +40,8 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        fprintf(stderr, "printing collocators of \"%s\" as json:\n", argv[i]);
-        printf("%s%s\n", get_collocators_as_json(cdb, word_id), i < argc - 1 ? "," : "");
+        fprintf(stderr, "printing collocates of \"%s\" as json:\n", argv[i]);
+        printf("%s%s", get_collocators_as_json(cdb, word_id), i < argc - 1 ? "," : "");
     }
     printf("]\n");
     return 0;
