@@ -97,10 +97,14 @@ char *get_collocation_scores_as_json(COLLOCATORDB *db, uint32_t w1, uint32_t w2)
 char *get_word(COLLOCATORDB *db, uint32_t w1);
 void read_vocab(COLLOCATORDB *db, char *fname);
 char *get_version();
+uint64_t get_word_id(COLLOCATORDB *db, const char *word);
 ```
 
 ## Changes
 
+* v1.4.0 (2024-11-23)
+  * added `collocatordb_query` command line tool
+  * added `get_word_id()`, which returns the ID of a word
   * added `md_nws` MI² score based on nominal window size (=10) instead of actual window size, for which only positions are counted where the collocate actually occurs
 
 * v1.3.2 (2024-11-15)

@@ -115,7 +115,7 @@ void test_writing() {
 
 void test_version_function() {
   char *version = get_version();
-  TEST_CHECK(strcmp(version, "1.3.2") == 0);
+  TEST_CHECK(strcmp(version, "1.4.0") == 0);
   TEST_MSG("Unexpected version: %s", version);
 }
 
