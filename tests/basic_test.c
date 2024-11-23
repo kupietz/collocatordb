@@ -109,6 +109,14 @@ void test_version_function() {
   TEST_MSG("Unexpected version: %s", version);
 }
 
+void test_get_word_id() {
+  COLLOCATORDB* cdb = open_collocatordb(dbpath);
+  TEST_ASSERT(cdb != NULL);
+  uint64_t id = get_word_id(cdb, "ist");
+  TEST_CHECK(id == 10);
+  TEST_MSG("Unexpected word id: %lu", id);
+}
+
 TEST_LIST = {
     { "open database for reading", test_open_db },
     { "get word", test_get_word },
@@ -117,5 +125,6 @@ TEST_LIST = {
     { "collocation analysis as json", test_collocation_analysis_as_json },
     { "writing", test_writing },
     { "version function", test_version_function },
+    { "get word id", test_get_word_id },
     { NULL, NULL }
 };
