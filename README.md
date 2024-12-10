@@ -99,12 +99,14 @@ void read_vocab(COLLOCATORDB *db, char *fname);
 char *get_version();
 uint64_t get_word_id(COLLOCATORDB *db, const char *word);
 uint64_t get_corpus_size(COLLOCATORDB *db);
+uint64_t get_word_frequency(COLLOCATORDB *db, uint64_t w);
 ```
 
 ## Changes
 
 * v1.4.0.9000 (unpublished)
   * added `get_corpus_size()`, which returns the total token count
+  * added `get_word_frequency()`, which returns the absolute frequency of a word in the corpus
 
 * v1.4.0 (2024-11-23)
   * added `collocatordb_query` command line tool

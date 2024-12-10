@@ -141,6 +141,15 @@ void test_get_corpus_size() {
   TEST_MSG("Unexpected corpus size: %lu", size);
 }
 
+void test_get_word_frequency() {
+  COLLOCATORDB* cdb = open_collocatordb(dbpath);
+  TEST_ASSERT(cdb != NULL);
+  int w1 = get_word_id(cdb, "Test");
+  uint64_t freq = get_word_frequency(cdb, w1);
+  TEST_CHECK(freq == 3);
+  TEST_MSG("Unexpected word frequency: %lu", freq);
+}
+
 TEST_LIST = {
     { "open database for reading", test_open_db },
     { "get word", test_get_word },
@@ -151,6 +160,7 @@ TEST_LIST = {
     { "version function", test_version_function },
     { "get word id", test_get_word_id },
     { "get corpus size", test_get_corpus_size},
+    { "get word frequency", test_get_word_frequency},
     { "collocatordb_query command line tool", test_collocatordb_query_command_line_tool},
     { NULL, NULL }
 };
