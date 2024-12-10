@@ -309,6 +309,8 @@ public:
 
   uint64_t getWordId(const char *word) const;
 
+  uint64_t getCorpusSize() const;
+
   CollocatorDB(const char *db_name, bool read_only);
 
   // public interface of CollocatorDB.
@@ -807,6 +809,10 @@ uint64_t CollocatorDB::getWordId(const char *word) const {
   return 0;
 }
 
+uint64_t CollocatorDB::getCorpusSize() const {
+  return total;
+}
+
 string CollocatorDB::collocators2json(uint32_t w1,
                                                const vector<Collocator>& collocators) {
   ostringstream s;
@@ -914,6 +920,8 @@ get_collocation_scores_as_json(COLLOCATORS *db, uint32_t w1, uint32_t w2) {
 }
 
 DLL_EXPORT const char *get_version() { return PROJECT_VERSION; }
+
+DLL_EXPORT uint64_t get_corpus_size(COLLOCATORS *db) { return db->getCorpusSize(); };
 
 #ifdef __clang__
 #pragma clang diagnostic push

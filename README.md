@@ -98,9 +98,13 @@ char *get_word(COLLOCATORDB *db, uint32_t w1);
 void read_vocab(COLLOCATORDB *db, char *fname);
 char *get_version();
 uint64_t get_word_id(COLLOCATORDB *db, const char *word);
+uint64_t get_corpus_size(COLLOCATORDB *db);
 ```
 
 ## Changes
+
+* v1.4.0.9000 (unpublished)
+  * added `get_corpus_size()`, which returns the total token count
 
 * v1.4.0 (2024-11-23)
   * added `collocatordb_query` command line tool

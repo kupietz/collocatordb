@@ -133,6 +133,14 @@ void test_collocatordb_query_command_line_tool() {
   TEST_MSG("collectordb_query command failed with result: %d", result);
 }
 
+void test_get_corpus_size() {
+  COLLOCATORDB* cdb = open_collocatordb(dbpath);
+  TEST_ASSERT(cdb != NULL);
+  uint64_t size = get_corpus_size(cdb);
+  TEST_CHECK(size == 152743);
+  TEST_MSG("Unexpected corpus size: %lu", size);
+}
+
 TEST_LIST = {
     { "open database for reading", test_open_db },
     { "get word", test_get_word },
@@ -142,6 +150,7 @@ TEST_LIST = {
     { "writing", test_writing },
     { "version function", test_version_function },
     { "get word id", test_get_word_id },
+    { "get corpus size", test_get_corpus_size},
     { "collocatordb_query command line tool", test_collocatordb_query_command_line_tool},
     { NULL, NULL }
 };
