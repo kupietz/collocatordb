@@ -526,10 +526,6 @@ std::shared_ptr<DB> CollocatorDB::OpenDbForRead(const char *name) {
     // options.env->SetBackgroundThreads(16, Env::Priority::LOW); // Increase background threads for low priority
     options.create_if_missing = true;
     options.merge_operator = std::make_shared<CountMergeOperator>();
-    options.max_background_jobs = max_cores * 2;
-    options.soft_pending_compaction_bytes_limit = 64 * 1024 * 1024; // 64MB
-    options.hard_pending_compaction_bytes_limit = 128 * 1024 * 1024; // 128MB
-
     //options.max_successive_merges = 0;
     // options.IncreaseParallelism(max_cores); // Utilize all available cores
     // options.OptimizeLevelStyleCompaction();
