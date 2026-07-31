@@ -2,36 +2,15 @@ image: gcc
 
 build-and-test:
   stage: build
-  cache:
-    - key: one-key-to-rule-them-all
-      paths:
-        - rocksdb-5.11.3/
   before_script:
     - pwd
     - source `find .. -name section_helper.sh`
 
     - start_section install_linux_packages "Installing missing Linux packages"
-    - apt update && apt -y install cmake libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libomp-dev
+    - apt update && apt -y install cmake librocksdb-dev libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libomp-dev
     - end_section install_linux_packages
 
   script:
-    - start_section install_rocksdb "Building and installing rocksdb"
-    - git clone https://github.com/kupietz/rocksdb.git -b 5.11.fb --single-branch
-    - cd rocksdb
-    - export PROCS=$(nproc)
-    - make -j $PROCS static_lib DISABLE_WARNING_AS_ERROR=1 WARNING_FLAGS=-w
-    - make install-static DISABLE_WARNING_AS_ERROR=1 WARNING_FLAGS=-w
-    - strip --strip-unneeded `find -name librocksdb.a`
-    - end_section install_rocksdb_static
-
-    - start_section install_rocksdb_shared "Building and installing rocksdb-shared"
-    - make -j $PROCS shared_lib DISABLE_WARNING_AS_ERROR=1 WARNING_FLAGS=-w
-    - make install-shared DISABLE_WARNING_AS_ERROR=1 WARNING_FLAGS=-w
-    - strip --strip-unneeded `find -name librocksdb.so`
-    - ldconfig
-    - cd ..
-    - end_section install_rocksdb
-
     - start_section install_collocatordb "Building and installing collocatordb"
     - mkdir -p build
     - cd build
@@ -46,7 +25,5 @@ build-and-test:
 
   artifacts:
     paths:
-      - "rocksdb-5.11.3/*.so*"
-      - "rocksdb-5.11.3/*.a"
       - "build/libcollocatordb.so*"
       - "build/libcollocatordb*.a"
