@@ -5,6 +5,7 @@
 #include <ftw.h>
 #include "../src/collocatordb.h"
 #include "acutest.h"
+#include "config.h"
 
 char dbpath[] = "../tests/data/wpd19_10000";
 const int testword = 10; // ist
@@ -115,8 +116,10 @@ void test_writing() {
 
 void test_version_function() {
   char *version = get_version();
-  TEST_CHECK(strcmp(version, "1.4.0") == 0);
-  TEST_MSG("Unexpected version: %s", version);
+  /* against the version of the build, so that a version bump does not have to
+     be repeated here */
+  TEST_CHECK(strcmp(version, PROJECT_VERSION) == 0);
+  TEST_MSG("Unexpected version: %s, expected %s", version, PROJECT_VERSION);
 }
 
 void test_get_word_id() {
