@@ -43,6 +43,31 @@ else()
        set(CMAKE_FIND_LIBRARY_SUFFIXES ${_collocatordb_lib_suffixes})
 endif()
 message(STATUS "Using RocksDB library ${ROCKSDB}")
+
+# The compiler looks into /usr/local/include before /usr/include, so a leftover
+# rocksdb installation there is used for the headers while the library of the
+# distribution is linked. That ends in a wall of undefined references, so say
+# what is wrong while it is still obvious.
+find_path(ROCKSDB_INCLUDE_DIR rocksdb/version.h)
+if (ROCKSDB_INCLUDE_DIR AND ROCKSDB)
+    file(STRINGS "${ROCKSDB_INCLUDE_DIR}/rocksdb/version.h" _rocksdb_major_line
+         REGEX "^#define ROCKSDB_MAJOR ")
+    string(REGEX MATCH "[0-9]+" ROCKSDB_HEADER_MAJOR "${_rocksdb_major_line}")
+    get_filename_component(_rocksdb_real "${ROCKSDB}" REALPATH)
+    if (_rocksdb_real MATCHES "librocksdb\\.so\\.([0-9]+)")
+        set(ROCKSDB_LIB_MAJOR ${CMAKE_MATCH_1})
+        message(STATUS "Using RocksDB headers ${ROCKSDB_INCLUDE_DIR} (version ${ROCKSDB_HEADER_MAJOR})")
+        if (NOT ROCKSDB_HEADER_MAJOR STREQUAL ROCKSDB_LIB_MAJOR)
+            message(FATAL_ERROR
+                    "The rocksdb headers in ${ROCKSDB_INCLUDE_DIR} are version "
+                    "${ROCKSDB_HEADER_MAJOR}, but ${ROCKSDB} is version "
+                    "${ROCKSDB_LIB_MAJOR}. Most likely a leftover rocksdb below "
+                    "/usr/local shadows the one of the distribution - remove it, "
+                    "or point -DROCKSDB= at the library belonging to the headers.")
+        endif()
+    endif()
+endif()
+
 find_library(ROCKSDB_STATIC librocksdb.a)
 
 get_cmake_property(_variableNames VARIABLES)

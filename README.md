@@ -4,52 +4,32 @@
 
 ### Install RocksDB and prerequisites
 
-* on CentOS, Fedora, RHEL
+The rocksdb of the distribution is used, no particular version is required.
+
+* on Fedora, Rocky Linux, RHEL
 
     ```bash
-    sudo yum install cmake3 snappy snappy-devel zlib zlib-devel bzip2 bzip2-devel lz4-devel libzstd-devel libomp-devel
-
-    git clone https://github.com/gflags/gflags.git
-    cd gflags
-    git checkout v2.0
-    ./configure && make && sudo make install
-    cd ..
+    sudo dnf install cmake gcc-c++ rocksdb-devel snappy-devel zlib-devel bzip2-devel lz4-devel libzstd-devel gflags-devel
     ```
 
 * on Ubuntu, Debian
 
     ```bash
-    sudo apt-get install cmake libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libomp-dev
+    sudo apt-get install cmake librocksdb-dev libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libomp-dev
     ```
 
 * on MacOS
 
     ```bash
-    brew install cmake snappy zlib bzip2 lz4 zstd libomp gflags
+    brew install cmake rocksdb snappy zlib bzip2 lz4 zstd libomp gflags
     ```
 
-* install our fork of [RocksDB v5.11.3.fb](https://github.com/kupietz/rocksdb/tree/5.11.fb)
-  * on Linux
-
-    ```bash
-    git clone https://github.com/kupietz/rocksdb.git -b 5.11.fb --single-branch
-    cd rocksdb
-    make -j $(nproc) static_lib DISABLE_WARNING_AS_ERROR=1 && sudo make install-static DISABLE_WARNING_AS_ERROR=1
-    make -j $(nproc) shared_lib DISABLE_WARNING_AS_ERROR=1 && sudo make install-shared DISABLE_WARNING_AS_ERROR=1
-    cd build
-    ldconfig
-    ```
-
-  * on MacOS
-
-    ```bash
-    git clone https://github.com/kupietz/rocksdb.git -b 5.11.fb --single-branch
-    cd rocksdb
-    mkdir -f build
-    cd build
-    cmake .. -DWITH_SNAPPY=1 -DWITH_LZ4=1 -DWITH_ZLIB=1 -DWITH_GFLAGS=1 -DCMAKE_INSTALL_LIBDIR=/usr/local/lib
-    make -j $(sysctl -n hw.ncpu) && sudo make install
-    ```
+Do not install another rocksdb below `/usr/local` next to the packaged one. The
+compiler looks into `/usr/local/include` before `/usr/include`, so its headers
+would be used while the library of the distribution is linked, which ends in a
+long list of undefined references. The build compares the version of the
+headers with the version of the library and stops with an explanation when they
+do not match.
 
 ### Install CollocatorDB
 
@@ -59,7 +39,36 @@ cd collocatordb
 mkdir -p build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=/usr/local ..
-make && ctest --extra-verbose && sudo make install
+make && sudo make install && sudo ldconfig
+ctest --extra-verbose
+```
+
+The tests run after the installation, not before: one of them calls the
+`collocatordb_query` tool, which is built with the rpath of its install
+location and does not find the library as long as it is not installed. The
+build directory has to be `build` inside the sources, the tests look for the
+tool and for their data relative to it.
+
+### Static library
+
+`libcollocatordb_static.a` is built as well. It is linked against the shared
+rocksdb unless a static rocksdb is found, which is enough for most purposes.
+A static rocksdb is only needed to link a program completely statically, as
+dereko2vec does, which is worth about 10% on collocator lookups.
+
+Debian and Ubuntu ship `librocksdb.a` in `librocksdb-dev`, so there is nothing
+to do. Fedora, Rocky Linux and RHEL do not ship one, so it has to be built.
+Keep it out of `/usr/local`, where its headers would shadow those of the
+package, and point the build at it:
+
+```bash
+git clone https://github.com/facebook/rocksdb.git -b v$(rpm -q --qf '%{VERSION}' rocksdb) --single-branch
+cd rocksdb
+make -j $(nproc) static_lib
+make install-static INSTALL_PATH=$HOME/rocksdb-static
+cd ../collocatordb/build
+cmake -DROCKSDB_STATIC=$HOME/rocksdb-static/lib/librocksdb.a -DCMAKE_INSTALL_PREFIX=/usr/local ..
+make && sudo make install && sudo ldconfig
 ```
 
 ## Provided API
@@ -104,7 +113,13 @@ uint64_t get_word_frequency(COLLOCATORDB *db, uint64_t w);
 
 ## Changes
 
-* v1.4.0.9000 (unpublished)
+* v1.5.0 (2026-07-31)
+  * fixed two memory leaks in the collocator lookup, a rocksdb iterator and the
+    window sums, together 3.6 kB per call
+  * builds against the rocksdb of the distribution, no rocksdb 5.11 from source
+    anymore. Verified with 7.8 (Debian), 10.2 (Fedora) and 11.0 (Alpine);
+    existing databases stay readable
+  * needs C++17, and C++20 for rocksdb 11 and newer
   * added `get_corpus_size()`, which returns the total token count
   * added `get_word_frequency()`, which returns the absolute frequency of a word in the corpus
 
