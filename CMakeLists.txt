@@ -3,8 +3,14 @@ project(collocatordb VERSION 1.5.0 DESCRIPTION "Storing and retrieving collocati
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fno-rtti")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g")
 
-# RocksDB requires C++17 since version 7
-set(CMAKE_CXX_STANDARD 17)
+# RocksDB requires C++17 since version 7 and C++20 since version 11, so use the
+# newest standard the compiler knows. Nothing here depends on it, this only has
+# to satisfy the rocksdb headers.
+if ("cxx_std_20" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+    set(CMAKE_CXX_STANDARD 20)
+else()
+    set(CMAKE_CXX_STANDARD 17)
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(GNUInstallDirs)

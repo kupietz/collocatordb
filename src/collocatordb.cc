@@ -16,10 +16,22 @@
 #include <memory>
 #include <rocksdb/merge_operator.h>
 #include <rocksdb/slice_transform.h>
+#include <rocksdb/version.h>
 #include <sstream> // for ostringstream
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
+
+/* Since rocksdb 11 DB::Open() and DB::OpenForReadOnly() hand the database back
+   as a unique_ptr instead of a raw pointer. */
+#if ROCKSDB_MAJOR >= 11
+#define ROCKSDB_DB_HANDLE std::unique_ptr<rocksdb::DB>
+#define ROCKSDB_DB_RELEASE(handle) (handle).release()
+#else
+#define ROCKSDB_DB_HANDLE rocksdb::DB *
+#define ROCKSDB_DB_RELEASE(handle) (handle)
+#endif
 
 #define WINDOW_SIZE 5
 #define FREQUENCY_THRESHOLD 5
@@ -498,7 +510,7 @@ void CollocatorDB::readVocab(const string& fname) {
 }
 
 std::shared_ptr<DB> CollocatorDB::OpenDbForRead(const char *name) {
-  DB *db;
+  ROCKSDB_DB_HANDLE db;
   Options options;
   options.env->SetBackgroundThreads(4);
   options.create_if_missing = true;
@@ -517,11 +529,11 @@ std::shared_ptr<DB> CollocatorDB::OpenDbForRead(const char *name) {
   }
   vocabname << name << ".vocab";
   readVocab(vocabname.str());
-  return std::shared_ptr<DB>(db);
+  return std::shared_ptr<DB>(ROCKSDB_DB_RELEASE(db));
 }
 
   std::shared_ptr<DB> CollocatorDB::OpenDb(const char *dbname) {
-    DB *db;
+    ROCKSDB_DB_HANDLE db;
     Options options;
 
     int max_cores = static_cast<int>(std::thread::hardware_concurrency());
@@ -569,7 +581,7 @@ std::shared_ptr<DB> CollocatorDB::OpenDbForRead(const char *name) {
       assert(false);
     }
     total = 1000;
-    return std::shared_ptr<DB>(db);
+    return std::shared_ptr<DB>(ROCKSDB_DB_RELEASE(db));
   }
 
 CollocatorIterator *
