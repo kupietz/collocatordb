@@ -225,6 +225,10 @@ class CollocatorIterator : public Iterator {
 public:
   explicit CollocatorIterator(Iterator *base_iterator) : base_iterator_(base_iterator) {}
 
+  /* Takes ownership of the iterator handed in by SeekIterator(). Without this
+     every seek leaked a rocksdb iterator and the resources it pins. */
+  ~CollocatorIterator() override { delete base_iterator_; }
+
   void setPrefix(char *prefix) { memcpy(prefixc, prefix, sizeof(uint64_t)); }
 
   void SeekToFirst() override { base_iterator_->SeekToFirst(); }
@@ -677,9 +681,9 @@ CollocatorDB::get_collocators(uint32_t w1, uint32_t min_w2,
   std::vector<Collocator> collocators;
   uint64_t w2, last_w2 = 0xffffffffffffffff;
   uint64_t maxv = 0, sum = 0;
-  auto *sumWindow =
-      static_cast<uint64_t *>(malloc(sizeof(uint64_t) * 2 * WINDOW_SIZE));
-  memset(sumWindow, 0, sizeof(uint64_t) * 2 * WINDOW_SIZE);
+  /* fixed size, so it lives on the stack and cannot be leaked */
+  uint64_t sumWindow[2 * WINDOW_SIZE];
+  memset(sumWindow, 0, sizeof(sumWindow));
   int true_window_size = 1;
   int usedPositions = 0;
 
