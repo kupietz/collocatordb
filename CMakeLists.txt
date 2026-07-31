@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION 3.9)
 project(collocatordb VERSION 1.4.0 DESCRIPTION "Storing and retrieving collocation counts based on RocksDB")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fno-rtti -std=c++11 -std=gnu++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fno-rtti")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g")
+
+# RocksDB requires C++17 since version 7
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(GNUInstallDirs)
 
@@ -12,7 +16,7 @@ if("${isSystemDir}" STREQUAL "-1")
 endif("${isSystemDir}" STREQUAL "-1")
 
 configure_file(src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h @ONLY)
-include_directories(/usr/local/include /opt/homebrew/include build)
+include_directories(/usr/local/include /opt/homebrew/include ${CMAKE_CURRENT_BINARY_DIR} build)
 link_directories(/usr/local/lib64 /usr/local/lib /usr/lib64 /usr/lib /opt/homebrew/lib)
 if (1 AND APPLE)
        message("MacOS deteted")
@@ -22,8 +26,17 @@ if (1 AND APPLE)
        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flat_namespace")
 else()
        set(LIBRT "rt")
-       find_library(ROCKSDB NAMES librocksdb.so.5.11)
+       # No version pin, so that the rocksdb of the distribution can be used.
+       # Only shared libraries, the static one is picked up as ROCKSDB_STATIC
+       # below. Set -DROCKSDB=<path> to choose a specific one, and make sure the
+       # headers that are found belong to it, i.e. that there is no leftover
+       # rocksdb installation below /usr/local.
+       set(_collocatordb_lib_suffixes ${CMAKE_FIND_LIBRARY_SUFFIXES})
+       set(CMAKE_FIND_LIBRARY_SUFFIXES ".so")
+       find_library(ROCKSDB NAMES rocksdb)
+       set(CMAKE_FIND_LIBRARY_SUFFIXES ${_collocatordb_lib_suffixes})
 endif()
+message(STATUS "Using RocksDB library ${ROCKSDB}")
 find_library(ROCKSDB_STATIC librocksdb.a)
 
 get_cmake_property(_variableNames VARIABLES)
@@ -43,7 +56,15 @@ set_target_properties(collocatordb PROPERTIES
         PUBLIC_HEADER src/collocatordb.h)
 
 add_library(collocatordb_static STATIC src/collocatordb.cc)
-target_link_libraries(collocatordb_static ${ROCKSDB_STATIC} pthread ${LIBRT} snappy z bz2 lz4 zstd dl)
+# Distributions usually package rocksdb as a shared library only, in which case
+# the static collocatordb is linked against that one.
+if (ROCKSDB_STATIC)
+    set(ROCKSDB_FOR_STATIC ${ROCKSDB_STATIC})
+else()
+    set(ROCKSDB_FOR_STATIC ${ROCKSDB})
+    message(STATUS "No static rocksdb found, linking collocatordb_static against ${ROCKSDB}")
+endif()
+target_link_libraries(collocatordb_static ${ROCKSDB_FOR_STATIC} pthread ${LIBRT} snappy z bz2 lz4 zstd dl)
 
 add_executable(basic_test tests/basic_test.c tests/acutest.h)
 TARGET_LINK_LIBRARIES(basic_test ${ROCKSDB} collocatordb)
