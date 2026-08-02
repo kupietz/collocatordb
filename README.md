@@ -31,6 +31,34 @@ long list of undefined references. The build compares the version of the
 headers with the version of the library and stops with an explanation when they
 do not match.
 
+### Where there is no rocksdb package
+
+Rocky Linux and RHEL do not necessarily have one. Build rocksdb once, with the
+shared and the static library, into a prefix of its own:
+
+```bash
+git clone https://github.com/facebook/rocksdb.git -b v10.2.1 --single-branch
+cmake -S rocksdb -B rocksdb/build -DCMAKE_BUILD_TYPE=Release \
+      -DFAIL_ON_WARNINGS=OFF \
+      -DWITH_TESTS=OFF -DWITH_BENCHMARK_TOOLS=OFF -DWITH_TOOLS=OFF -DWITH_CORE_TOOLS=OFF \
+      -DROCKSDB_BUILD_SHARED=ON \
+      -DCMAKE_INSTALL_PREFIX=$HOME/rocksdb
+cmake --build rocksdb/build -j $(nproc)
+cmake --install rocksdb/build
+```
+
+and tell collocatordb where it is, which covers the headers and both libraries
+at once:
+
+```bash
+cmake -S . -B build -DCMAKE_PREFIX_PATH=$HOME/rocksdb -DCMAKE_INSTALL_PREFIX=/usr/local
+cmake --build build -j $(nproc)
+sudo cmake --install build && sudo ldconfig
+```
+
+`$HOME/rocksdb/lib64` has to be in the search path of the loader for the
+programs that use it, see `/etc/ld.so.conf.d`.
+
 ### Install CollocatorDB
 
 ```bash

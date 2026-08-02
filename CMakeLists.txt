@@ -46,13 +46,25 @@ else()
        find_library(ROCKSDB NAMES rocksdb)
        set(CMAKE_FIND_LIBRARY_SUFFIXES ${_collocatordb_lib_suffixes})
 endif()
+if (NOT ROCKSDB)
+    message(FATAL_ERROR
+            "No rocksdb found. Install the development package of the "
+            "distribution, e.g. librocksdb-dev or rocksdb-devel. Where there is "
+            "none, build rocksdb and say where it is: "
+            "-DCMAKE_PREFIX_PATH=<prefix it was installed to>. Without this the "
+            "shared library would be built with unresolved rocksdb symbols, "
+            "which only shows up when something links it.")
+endif()
 message(STATUS "Using RocksDB library ${ROCKSDB}")
 
-# The compiler looks into /usr/local/include before /usr/include, so a leftover
-# rocksdb installation there is used for the headers while the library of the
-# distribution is linked. That ends in a wall of undefined references, so say
-# what is wrong while it is still obvious.
+# The headers have to belong to that library. Looked up rather than assumed, so
+# that CMAKE_PREFIX_PATH also works for a rocksdb that was built by hand, and
+# put before the rest, so that a leftover rocksdb below /usr/local cannot
+# shadow it - the compiler looks into /usr/local/include before /usr/include.
 find_path(ROCKSDB_INCLUDE_DIR rocksdb/version.h)
+if (ROCKSDB_INCLUDE_DIR)
+    include_directories(BEFORE ${ROCKSDB_INCLUDE_DIR})
+endif()
 if (ROCKSDB_INCLUDE_DIR AND ROCKSDB)
     file(STRINGS "${ROCKSDB_INCLUDE_DIR}/rocksdb/version.h" _rocksdb_major_line
          REGEX "^#define ROCKSDB_MAJOR ")
