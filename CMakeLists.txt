@@ -15,10 +15,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(GNUInstallDirs)
 
-# the RPATH to be used when installing, but only if it's not a system directory
-list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
+# The RPATH to be used when installing, but only if it is not a system
+# directory. CMAKE_INSTALL_FULL_LIBDIR rather than a hard coded lib: the library
+# goes to lib64 on Fedora, Rocky Linux and RHEL, and to lib/<triplet> on Debian
+# and Ubuntu, and an installation below /usr/local is in the search path of the
+# loader on none of them by default.
+list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_FULL_LIBDIR}" isSystemDir)
 if("${isSystemDir}" STREQUAL "-1")
-    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_FULL_LIBDIR}")
 endif("${isSystemDir}" STREQUAL "-1")
 
 configure_file(src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h @ONLY)
@@ -123,7 +127,7 @@ foreach(TOOL_SOURCE ${TOOLS_SOURCES})
     add_executable(${TOOL_NAME} ${TOOL_SOURCE})
     target_link_libraries(${TOOL_NAME} ${ROCKSDB} collocatordb)
     set_target_properties(${TOOL_NAME} PROPERTIES
-            INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib64"
+            INSTALL_RPATH "${CMAKE_INSTALL_FULL_LIBDIR}"
             BUILD_WITH_INSTALL_RPATH TRUE)
     add_dependencies(tools ${TOOL_NAME})
     install(TARGETS ${TOOL_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR})
