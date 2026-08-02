@@ -1,0 +1,58 @@
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake librocksdb-dev libgflags-dev libsnappy-dev \
+                                  zlib1g-dev libbz2-dev liblz4-dev libzstd-dev
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install cmake rocksdb snappy lz4 zstd gflags
+
+      - name: Show the rocksdb that will be used
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            dpkg-query -W -f='${Package} ${Version}\n' librocksdb-dev
+          else
+            brew list --versions rocksdb
+          fi
+
+      # The build directory has to be build/ inside the sources, the tests look
+      # for the collocatordb_query tool and their data relative to it.
+      - name: Configure
+        run: |
+          EXTRA=""
+          [ "$RUNNER_OS" = "macOS" ] && EXTRA="-DCMAKE_PREFIX_PATH=$(brew --prefix)"
+          cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/usr/local $EXTRA
+
+      - name: Build
+        run: cmake --build build -j
+
+      # Before the tests: one of them calls collocatordb_query, which is built
+      # with the rpath of its install location.
+      - name: Install
+        run: |
+          sudo cmake --install build
+          if [ "$RUNNER_OS" = "Linux" ]; then sudo ldconfig; fi
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
