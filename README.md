@@ -53,8 +53,13 @@ tool and for their data relative to it.
 
 `libcollocatordb_static.a` is built as well. It is linked against the shared
 rocksdb unless a static rocksdb is found, which is enough for most purposes.
-A static rocksdb is only needed to link a program completely statically, as
-dereko2vec does, which is worth about 10% on collocator lookups.
+
+Linking rocksdb and collocatordb statically into a program is worth about 22%
+when counting collocations and about 10% when looking them up, measured with
+rocksdb 7.8.3, which ships both variants. The compression libraries stay
+shared, so this does not need static versions of zlib, snappy and the others,
+which several distributions do not have. Only a completely static binary needs
+those, which is something else and rarely necessary.
 
 Debian and Ubuntu ship `librocksdb.a` in `librocksdb-dev`, so there is nothing
 to do. Fedora, Rocky Linux and RHEL do not ship one, so it has to be built.
