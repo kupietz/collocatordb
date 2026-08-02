@@ -61,14 +61,31 @@ to do. Fedora, Rocky Linux and RHEL do not ship one, so it has to be built.
 Keep it out of `/usr/local`, where its headers would shadow those of the
 package, and point the build at it:
 
+Build the same version as the rocksdb that collocatordb is compiled against,
+otherwise the static library does not match the headers:
+
 ```bash
 git clone https://github.com/facebook/rocksdb.git -b v$(rpm -q --qf '%{VERSION}' rocksdb) --single-branch
 cd rocksdb
-make -j $(nproc) static_lib
-make install-static INSTALL_PATH=$HOME/rocksdb-static
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+      -DFAIL_ON_WARNINGS=OFF \
+      -DWITH_TESTS=OFF -DWITH_BENCHMARK_TOOLS=OFF -DWITH_TOOLS=OFF -DWITH_CORE_TOOLS=OFF \
+      -DROCKSDB_BUILD_SHARED=OFF \
+      -DCMAKE_INSTALL_PREFIX=$HOME/rocksdb-static
+cmake --build build -j $(nproc)
+cmake --install build
 cd ../collocatordb/build
 cmake -DROCKSDB_STATIC=$HOME/rocksdb-static/lib/librocksdb.a -DCMAKE_INSTALL_PREFIX=/usr/local ..
 make && sudo make install && sudo ldconfig
+```
+
+`WITH_TESTS` and the tools bring in the bundled gtest, which is not needed for
+a static library and does not compile with every compiler. `FAIL_ON_WARNINGS`
+adds `-Werror`, which turns warnings of newer compilers about rocksdb's own
+code into errors - on Rocky Linux with gcc 11, for instance:
+
+```
+env/env.cc:688: error: 'hostname_buf' may be used uninitialized [-Werror=maybe-uninitialized]
 ```
 
 ## Provided API
