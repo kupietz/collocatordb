@@ -71,17 +71,22 @@ otherwise the static library does not match the headers:
 
 ```bash
 git clone https://github.com/facebook/rocksdb.git -b v$(rpm -q --qf '%{VERSION}' rocksdb) --single-branch
-cd rocksdb
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+cmake -S rocksdb -B rocksdb/build -DCMAKE_BUILD_TYPE=Release \
       -DFAIL_ON_WARNINGS=OFF \
       -DWITH_TESTS=OFF -DWITH_BENCHMARK_TOOLS=OFF -DWITH_TOOLS=OFF -DWITH_CORE_TOOLS=OFF \
       -DROCKSDB_BUILD_SHARED=OFF \
       -DCMAKE_INSTALL_PREFIX=$HOME/rocksdb-static
+cmake --build rocksdb/build -j $(nproc)
+cmake --install rocksdb/build
+```
+
+and then, in the collocatordb sources:
+
+```bash
+cmake -S . -B build -DROCKSDB_STATIC=$HOME/rocksdb-static/lib/librocksdb.a \
+      -DCMAKE_INSTALL_PREFIX=/usr/local
 cmake --build build -j $(nproc)
-cmake --install build
-cd ../collocatordb/build
-cmake -DROCKSDB_STATIC=$HOME/rocksdb-static/lib/librocksdb.a -DCMAKE_INSTALL_PREFIX=/usr/local ..
-make && sudo make install && sudo ldconfig
+sudo cmake --install build && sudo ldconfig
 ```
 
 `WITH_TESTS` and the tools bring in the bundled gtest, which is not needed for
