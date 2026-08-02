@@ -42,7 +42,7 @@ else()
        # headers that are found belong to it, i.e. that there is no leftover
        # rocksdb installation below /usr/local.
        set(_collocatordb_lib_suffixes ${CMAKE_FIND_LIBRARY_SUFFIXES})
-       set(CMAKE_FIND_LIBRARY_SUFFIXES ".so")
+       set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_SHARED_LIBRARY_SUFFIX})
        find_library(ROCKSDB NAMES rocksdb)
        set(CMAKE_FIND_LIBRARY_SUFFIXES ${_collocatordb_lib_suffixes})
 endif()
