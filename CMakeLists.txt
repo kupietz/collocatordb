@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.9)
-project(collocatordb VERSION 1.5.0 DESCRIPTION "Storing and retrieving collocation counts based on RocksDB")
+project(collocatordb VERSION 1.6.0 DESCRIPTION "Storing and retrieving collocation counts based on RocksDB")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fno-rtti")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g")
 

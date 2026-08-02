@@ -106,10 +106,77 @@ void test_writing() {
   inc_collocator(cdb, 1, 2, 4); size++;
   COLLOCATOR *c = get_collocators(cdb, 0);
   TEST_ASSERT(c != NULL);
-  TEST_CHECK(c[0].w2 == 1);
-  TEST_CHECK(c[0].raw == 2001);
-  TEST_CHECK(c[0].left_raw == 200);
-  TEST_CHECK(c[0].right_raw == 200);
+  /* Both collocates of word0 have to be there, in whatever order they are
+     sorted into: word1 with 2001 and word2 with 2000. The one that came last
+     used to be dropped, which is why this only asked for the first one. */
+  int n, seen1 = 0, seen2 = 0;
+  for (n = 0; c[n].raw > 0; n++) {
+    if (c[n].w2 == 1) {
+      seen1 = 1;
+      TEST_CHECK(c[n].raw == 2001);
+      TEST_CHECK(c[n].left_raw == 200);
+      TEST_CHECK(c[n].right_raw == 200);
+    } else if (c[n].w2 == 2) {
+      seen2 = 1;
+      TEST_CHECK(c[n].raw == 2000);
+    }
+  }
+  TEST_CHECK(n == 2);
+  TEST_MSG("expected 2 collocates, got %d", n);
+  TEST_CHECK(seen1 && seen2);
+
+  rmrf(rocksdbfn);
+}
+
+/* Every increment has to end up in the database, also when rocksdb would
+   rather cancel the write because compaction is behind, and also when they are
+   still in memory when the process that wrote them is gone. Both used to lose
+   counts silently: a quarter of them under write pressure, and everything that
+   had not been flushed when the indexer ended. */
+void test_no_increment_is_lost() {
+  char tmp_template[] = "/tmp/tmpfileXXXXXX";
+  int fd = mkstemp(tmp_template);
+  if (fd == -1) {
+    perror("mkstemp");
+    exit(EXIT_FAILURE);
+  }
+  close(fd);
+  char *tmp = strdup(tmp_template);
+  char rocksdbfn[1024], vocabfn[1024];
+  const long increments = 200000;
+  const int collocates = 100;
+  long i, total = 0;
+
+  snprintf(rocksdbfn, sizeof(rocksdbfn), "%s.rocksdb", tmp);
+  snprintf(vocabfn, sizeof(vocabfn), "%s.vocab", tmp);
+  FILE *h = fopen(vocabfn, "w");
+  for (i = 0; i <= collocates + 1; i++)
+    fprintf(h, "word%ld 1000\n", i);
+  fclose(h);
+
+  /* small write buffers, so that the writer runs into flushes and stalls */
+  setenv("COLLOCATORDB_WRITE_BUFFER_MB", "1", 1);
+  setenv("COLLOCATORDB_WRITE_BUFFERS", "2", 1);
+
+  COLLOCATORDB *cdb = open_collocatordb_for_write(rocksdbfn);
+  TEST_ASSERT(cdb != NULL);
+  for (i = 0; i < increments; i++)
+    inc_collocator(cdb, 1, 2 + (i % collocates), 1);   /* never w2 == w1 */
+  close_collocatordb(cdb);      /* has to write what is still in memory */
+
+  unsetenv("COLLOCATORDB_WRITE_BUFFER_MB");
+  unsetenv("COLLOCATORDB_WRITE_BUFFERS");
+
+  cdb = open_collocatordb(tmp);
+  TEST_ASSERT(cdb != NULL);
+  COLLOCATOR *c = get_collocators(cdb, 1);
+  TEST_ASSERT(c != NULL);
+  for (i = 0; i < collocates && c[i].raw > 0; i++)
+    total += c[i].raw;
+  TEST_CHECK(i == collocates);
+  TEST_MSG("only %ld of %d collocates are in the database", i, collocates);
+  TEST_CHECK(total == increments);
+  TEST_MSG("%ld of %ld increments survived", total, increments);
 
   rmrf(rocksdbfn);
 }
@@ -160,6 +227,7 @@ TEST_LIST = {
     { "collocation analysis", test_collocation_analysis },
     { "collocation analysis as json", test_collocation_analysis_as_json },
     { "writing", test_writing },
+    { "no increment is lost", test_no_increment_is_lost },
     { "version function", test_version_function },
     { "get word id", test_get_word_id },
     { "get corpus size", test_get_corpus_size},

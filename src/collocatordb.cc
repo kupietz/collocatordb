@@ -9,6 +9,7 @@
 #include "rocksdb/table.h"
 #include "rocksdb/slice.h"
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -299,6 +300,10 @@ public:
 
 class CollocatorDB {
   WriteOptions merge_option_; // for merge
+  // to repeat a write that rocksdb cancelled, rather than lose the count
+  WriteOptions blocking_merge_option_;
+  std::atomic<uint64_t> stalled_writes_{0};
+  std::atomic<uint64_t> failed_writes_{0};
   char _one[sizeof(uint64_t)]{};
   Slice _one_slice;
   vector<VocabEntry> _vocab;
@@ -320,7 +325,7 @@ protected:
   std::shared_ptr<DB> OpenDbForRead(const char *dbname);
 
 public:
-  virtual ~CollocatorDB() = default;
+  virtual ~CollocatorDB();  // flushes what is still in memory, see close()
   void readVocab(const string& fname);
   string getWord(uint32_t w1);
 
@@ -397,14 +402,33 @@ public:
     return value;
   }
 
+  /* A merge that does not lose the count. rocksdb cancels a write with
+     Status::Incomplete instead of waiting when it is asked not to slow down,
+     and then the increment is simply gone. Such a write was not applied, so
+     repeating it blocking cannot count twice. */
+  void merge_one(const Slice &key) {
+    Status s = db_->Merge(merge_option_, key, _one_slice);
+    if (s.ok())
+      return;
+    if (s.IsIncomplete()) {
+      ++stalled_writes_;
+      s = db_->Merge(blocking_merge_option_, key, _one_slice);
+      if (s.ok())
+        return;
+    }
+    if (failed_writes_++ == 0)
+      std::cerr << "collocatordb: cannot write, counts are lost: " << s.ToString()
+                << std::endl;
+  }
+
   virtual void inc(const std::string &key) {
-    db_->Merge(merge_option_, key, _one_slice);
+    merge_one(Slice(key));
   }
 
   void inc(const uint64_t key) {
     char encoded_key[sizeof(uint64_t)];
     EncodeFixed64(encoded_key, key);
-    db_->Merge(merge_option_, std::string(encoded_key, 8), _one_slice);
+    merge_one(Slice(encoded_key, sizeof(uint64_t)));
   }
 
   virtual void inc(uint32_t w1, uint32_t w2, uint8_t dist);
@@ -445,7 +469,31 @@ public:
   }
 
   CollocatorIterator *SeekIterator(uint64_t w1, uint64_t w2, int8_t dist) const;
+
+  /* Writes what is still in memory and closes the database. Without this
+     everything that has not been flushed yet is lost when the process ends,
+     because the write ahead log is switched off for speed. */
+  void close() {
+    if (!db_)
+      return;
+    if (stalled_writes_ > 0)
+      std::cerr << "collocatordb: repeated " << stalled_writes_
+                << " writes that rocksdb had cancelled" << std::endl;
+    if (failed_writes_ > 0)
+      std::cerr << "collocatordb: " << failed_writes_
+                << " writes failed, the database is missing counts" << std::endl;
+    FlushOptions flush_options;
+    flush_options.wait = true;
+    Status s = db_->Flush(flush_options);
+    if (!s.ok() && !s.IsNotSupported())
+      std::cerr << "collocatordb: cannot write what is still in memory: "
+                << s.ToString() << std::endl;
+    db_.reset();
+  }
+
 };
+
+CollocatorDB::~CollocatorDB() { close(); }
 
 CollocatorDB::CollocatorDB(const char *db_name,
                                     bool read_only = false) {
@@ -532,48 +580,80 @@ std::shared_ptr<DB> CollocatorDB::OpenDbForRead(const char *name) {
   return std::shared_ptr<DB>(ROCKSDB_DB_RELEASE(db));
 }
 
+  /* Reads a size from the environment, so that a long indexing run can be
+     tuned without recompiling. Returns the default when unset or unusable. */
+  static uint64_t env_size(const char *name, uint64_t fallback) {
+    const char *value = getenv(name);
+    if (value == nullptr)
+      return fallback;
+    char *end = nullptr;
+    unsigned long long parsed = strtoull(value, &end, 10);
+    if (end == value || parsed == 0) {
+      std::cerr << "collocatordb: ignoring " << name << "=" << value << std::endl;
+      return fallback;
+    }
+    return (uint64_t)parsed;
+  }
+
   std::shared_ptr<DB> CollocatorDB::OpenDb(const char *dbname) {
     ROCKSDB_DB_HANDLE db;
     Options options;
 
     int max_cores = static_cast<int>(std::thread::hardware_concurrency());
 
-    // options.env->SetBackgroundThreads(32, Env::Priority::HIGH); // Increase background threads for high priority
-    // options.env->SetBackgroundThreads(16, Env::Priority::LOW); // Increase background threads for low priority
     options.create_if_missing = true;
     options.merge_operator = std::make_shared<CountMergeOperator>();
-    //options.max_successive_merges = 0;
-    // options.IncreaseParallelism(max_cores); // Utilize all available cores
-    // options.OptimizeLevelStyleCompaction();
 
-    // Increase write buffer size and number of write buffers
-    // options.write_buffer_size = 512 * 1024 * 1024; // 512MB
-    // options.max_write_buffer_number = max_cores;
-    // options.min_write_buffer_number_to_merge = max_cores / 2;
+    /* Indexing a corpus is one long stream of merge operands for the same
+       keys. rocksdb only collapses them when memtables are merged and when
+       files are compacted, so the settings aim at doing that early and often -
+       every collapsed operand is one less to write, to read and to merge
+       again later.
 
-    // Enable concurrent memtable writes
-    options.allow_concurrent_memtable_write = true;
+       All of it can be overridden from the environment, to be able to tune a
+       run that takes days without recompiling. */
+    options.write_buffer_size = env_size("COLLOCATORDB_WRITE_BUFFER_MB", 256) << 20;
+    options.max_write_buffer_number = (int)env_size("COLLOCATORDB_WRITE_BUFFERS", 8);
+    /* collapses the operands of several memtables before they are written */
+    options.min_write_buffer_number_to_merge =
+        (int)env_size("COLLOCATORDB_WRITE_BUFFERS_TO_MERGE", 4);
+
+    /* Compaction has to keep up with the writer, otherwise the level 0 files
+       pile up and every read has to merge through all of them. */
+    options.max_background_jobs =
+        (int)env_size("COLLOCATORDB_BACKGROUND_JOBS",
+                      max_cores > 4 ? (max_cores < 32 ? max_cores : 32) : 4);
+    options.max_subcompactions = (int)env_size("COLLOCATORDB_SUBCOMPACTIONS", 4);
+    options.level0_file_num_compaction_trigger = 4;
+    options.level0_slowdown_writes_trigger = 20;
+    options.level0_stop_writes_trigger = 36;
+
+    /* Merge operands are inserted one writer at a time, rocksdb does not
+       support concurrent memtable writes for them, which is why more threads
+       in the indexer do not help beyond a certain point. */
+    options.allow_concurrent_memtable_write = false;
     options.enable_write_thread_adaptive_yield = true;
-    options.allow_mmap_writes = true;
     options.allow_mmap_reads = true;
 
-    // Optimize block cache size
     BlockBasedTableOptions table_options;
-    table_options.block_cache = NewLRUCache(8 * 1024 * 1024 * 1024L); // 8GB block cache
+    table_options.block_cache =
+        NewLRUCache(env_size("COLLOCATORDB_BLOCK_CACHE_MB", 512) << 20);
     options.table_factory.reset(NewBlockBasedTableFactory(table_options));
 
-    // Adjust compaction settings
-    options.level0_file_num_compaction_trigger = 100;
-    options.level0_slowdown_writes_trigger = 200;
-    options.level0_stop_writes_trigger = 400;
-    options.max_background_compactions = max_cores / 2;
-    options.max_background_flushes = max_cores / 4;
-    // options.disableWA
-    // Tune write options
-    merge_option_.low_pri = true; // Use low priority for compactions
-    merge_option_.disableWAL = true; // Disable Write-Ahead Logging for faster writes
-    merge_option_.sync = false; // Disable sync for faster writes
-    merge_option_.no_slowdown = true; // Disable write slowdown for faster writes
+    /* No write ahead log: an interrupted indexing run is repeated, and the log
+       would double the amount written. Everything that has not been flushed is
+       lost when the process dies, which is what close_collocatordb() is for. */
+    merge_option_.disableWAL = true;
+    merge_option_.sync = false;
+    /* Let rocksdb slow the writer down when compaction falls behind, instead
+       of cancelling the write. It used to be told to do neither, which threw
+       counts away. merge_one() repeats a cancelled write, whatever the
+       settings are. */
+    merge_option_.low_pri = false;
+    merge_option_.no_slowdown = false;
+    blocking_merge_option_ = merge_option_;
+    blocking_merge_option_.low_pri = false;
+    blocking_merge_option_.no_slowdown = false;
 
     Status s = DB::Open(options, dbname, &db);
     if (!s.ok()) {
@@ -751,6 +831,15 @@ CollocatorDB::get_collocators(uint32_t w1, uint32_t min_w2,
     }
   }
 
+  /* A collocate is only finished when the next one begins, so the last one is
+     still in sumWindow when the iterator is through. It used to be dropped,
+     which cost every word one of its collocates. */
+  if (last_w2 != 0xffffffffffffffff && sum >= FREQUENCY_THRESHOLD) {
+    collocators.push_back({});
+    applyCAMeasures(w1, last_w2, sumWindow, sum, usedPositions,
+                    true_window_size, &(collocators[collocators.size() - 1]));
+  }
+
   // #pragma omp taskwait
   sort(collocators.begin(), collocators.end(), sortByLogDiceAF);
 
@@ -897,6 +986,8 @@ DLL_EXPORT COLLOCATORS *open_collocatordb_for_write(char *dbname) {
   return new CollocatorDB(dbname, false);
 }
 
+DLL_EXPORT void close_collocatordb(COLLOCATORS *db) { delete db; }
+
 DLL_EXPORT COLLOCATORS *open_collocatordb(char *dbname) {
   return new CollocatorDB(dbname, true);
 }
@@ -915,9 +1006,12 @@ DLL_EXPORT COLLOCATORS *get_collocators(COLLOCATORS *db, uint32_t w1) {
   std::vector<Collocator> c = db->get_collocators(w1);
   if (c.empty())
     return nullptr;
-  uint64_t size = c.size() + sizeof c[0];
+  /* one entry more than there are collocators, terminated with w2 == 0 and
+     raw == 0, so that callers can tell where the array ends */
+  uint64_t size = (c.size() + 1) * sizeof c[0];
   auto *p = (COLLOCATORS *)malloc(size);
-  memcpy(p, c.data(), size);
+  memset(p, 0, size);
+  memcpy(p, c.data(), c.size() * sizeof c[0]);
   return p;
 }
 
@@ -926,9 +1020,12 @@ DLL_EXPORT COLLOCATORS *get_collocation_scores(COLLOCATORS *db, uint32_t w1,
   std::vector<Collocator> c = db->get_collocation_scores(w1, w2);
   if (c.empty())
     return nullptr;
-  uint64_t size = c.size() + sizeof c[0];
+  /* one entry more than there are collocators, terminated with w2 == 0 and
+     raw == 0, so that callers can tell where the array ends */
+  uint64_t size = (c.size() + 1) * sizeof c[0];
   auto *p = (COLLOCATORS *)malloc(size);
-  memcpy(p, c.data(), size);
+  memset(p, 0, size);
+  memcpy(p, c.data(), c.size() * sizeof c[0]);
   return p;
 }
 

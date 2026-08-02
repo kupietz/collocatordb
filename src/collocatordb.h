@@ -120,6 +120,7 @@ typedef struct {
 
 extern COLLOCATORDB *open_collocatordb(const char *s);
 extern COLLOCATORDB *open_collocatordb_for_write(const char *s);
+extern void close_collocatordb(COLLOCATORDB *db);
 extern void inc_collocator(COLLOCATORDB *db, uint64_t w1, uint64_t w2, int8_t dist);
 extern void dump_collocators(COLLOCATORDB *db, uint32_t w1, uint32_t w2, int8_t dist);
 extern COLLOCATOR *get_collocators(COLLOCATORDB *db, uint32_t w1);

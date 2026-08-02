@@ -97,6 +97,7 @@ typedef struct {
 
 COLLOCATORDB *open_collocatordb(const char *s);
 COLLOCATORDB *open_collocatordb_for_write(const char *s);
+void close_collocatordb(COLLOCATORDB *db);
 void inc_collocator(COLLOCATORDB *db, uint64_t w1, uint64_t w2, int8_t dist);
 void dump_collocators(COLLOCATORDB *db, uint32_t w1, uint32_t w2, int8_t dist);
 COLLOCATOR *get_collocators(COLLOCATORDB *db, uint32_t w1);
@@ -111,7 +112,45 @@ uint64_t get_corpus_size(COLLOCATORDB *db);
 uint64_t get_word_frequency(COLLOCATORDB *db, uint64_t w);
 ```
 
+## Indexing
+
+Building a collocation database is one long stream of increments for the same
+keys. The defaults are chosen for that, and can be adjusted from the
+environment, so that a run of several days does not have to be recompiled to be
+tuned:
+
+| variable | default | meaning |
+|---|---|---|
+| `COLLOCATORDB_WRITE_BUFFER_MB` | 256 | size of one write buffer |
+| `COLLOCATORDB_WRITE_BUFFERS` | 8 | how many of them |
+| `COLLOCATORDB_WRITE_BUFFERS_TO_MERGE` | 4 | how many are combined before they are written, which collapses the increments of the same key early |
+| `COLLOCATORDB_BACKGROUND_JOBS` | cores, at most 32 | threads for flushing and compaction |
+| `COLLOCATORDB_SUBCOMPACTIONS` | 4 | how far a single compaction is spread over threads |
+| `COLLOCATORDB_BLOCK_CACHE_MB` | 512 | block cache, only relevant for reading |
+
+Increments are inserted one writer at a time, rocksdb does not support
+concurrent memtable writes for merge operations, so more indexing threads stop
+helping at some point regardless of these settings.
+
+The database has no write ahead log, so an indexer has to call
+`close_collocatordb()` when it is done, otherwise everything that has not been
+flushed is lost.
+
 ## Changes
+
+* v1.6.0 (2026-08-02)
+  * fixed the loss of increments: rocksdb was told to cancel a write instead of
+    waiting when compaction is behind, and the result was not looked at. Under
+    write pressure a quarter of the increments were lost without any message.
+    A cancelled write is repeated now
+  * fixed the loss of everything that was not flushed yet when an indexer ends:
+    added `close_collocatordb()`, which writes it and closes the database
+  * fixed `get_collocators()` and `get_collocation_scores()` dropping the last
+    collocate of every word
+  * fixed the array returned by `get_collocators()` and
+    `get_collocation_scores()` being far too small, `+` instead of `*` in the
+    size. It is terminated with an empty entry now
+  * the settings for indexing can be adjusted from the environment, see above
 
 * v1.5.0 (2026-07-31)
   * fixed two memory leaks in the collocator lookup, a rocksdb iterator and the
